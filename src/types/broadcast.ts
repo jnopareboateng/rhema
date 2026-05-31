@@ -1,12 +1,9 @@
-export interface VerseSegment {
-  verseNumber?: number
-  text: string
-}
+import type { Slide, Segment } from "./slide"
 
-export interface VerseRenderData {
-  reference: string
-  segments: VerseSegment[]
-}
+/** @deprecated use Segment from "./slide" — alias kept until call sites migrate (M1 Task 8). */
+export type VerseSegment = Segment
+/** @deprecated use Slide from "./slide" — alias kept until call sites migrate (M1 Task 8). */
+export type VerseRenderData = Slide
 
 export interface RenderOptions {
   opacity?: number
