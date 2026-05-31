@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/tooltip"
 import { useBible, bibleActions } from "@/hooks/use-bible"
 import { useBibleStore, useQueueStore } from "@/stores"
+import { verseToContentItem } from "@/hooks/use-broadcast"
 import type { Book, Verse, SemanticSearchResult } from "@/types"
 import { Input } from "@/components/ui/input"
 import { searchContextWithFuse } from "@/lib/context-search"
@@ -88,7 +89,9 @@ export function SearchPanel() {
   const queueItems = useQueueStore((s) => s.items)
   const queuedVerseKeys = useMemo(() => {
     return new Set(
-      queueItems.map((item) => `${item.verse.book_number}:${item.verse.chapter}:${item.verse.verse}`)
+      queueItems
+        .filter((item) => item.kind === "verse")
+        .map((item) => `${item.verseRef.book_number}:${item.verseRef.chapter}:${item.verseRef.verse}`)
     )
   }, [queueItems])
 
@@ -620,14 +623,11 @@ export function SearchPanel() {
                             )}
                             onClick={(e) => {
                               e.stopPropagation()
-                              useQueueStore.getState().addItem({
-                                id: crypto.randomUUID(),
-                                verse,
-                                reference: `${verse.book_name} ${verse.chapter}:${verse.verse}`,
-                                confidence: 1,
-                                source: "manual",
-                                added_at: Date.now(),
-                              })
+                              const translationAbbrev = useBibleStore.getState().translations
+                                .find((t) => t.id === useBibleStore.getState().activeTranslationId)?.abbreviation ?? "KJV"
+                              useQueueStore.getState().addItem(
+                                verseToContentItem(verse, translationAbbrev, { source: "manual" })
+                              )
                             }}
                           >
                             <PlusIcon className="size-3" />
@@ -721,23 +721,18 @@ export function SearchPanel() {
                           className="absolute right-2 top-1/2 -translate-y-1/2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity bg-primary text-primary-foreground hover:bg-primary/80"
                           onClick={(e) => {
                             e.stopPropagation()
-                            useQueueStore.getState().addItem({
-                              id: crypto.randomUUID(),
-                              verse: {
-                                id: 0,
-                                translation_id: activeTranslationId,
-                                book_number: result.book_number,
-                                book_name: result.book_name,
-                                book_abbreviation: "",
-                                chapter: result.chapter,
-                                verse: result.verse,
-                                text: result.verse_text,
-                              },
-                              reference: `${result.book_name} ${result.chapter}:${result.verse}`,
-                              confidence: result.similarity,
-                              source: "manual",
-                              added_at: Date.now(),
-                            })
+                            const translationAbbrev = useBibleStore.getState().translations
+                              .find((t) => t.id === useBibleStore.getState().activeTranslationId)?.abbreviation ?? "KJV"
+                            useQueueStore.getState().addItem(
+                              verseToContentItem(
+                                { id: 0, translation_id: activeTranslationId,
+                                  book_number: result.book_number, book_name: result.book_name,
+                                  book_abbreviation: "", chapter: result.chapter,
+                                  verse: result.verse, text: result.verse_text },
+                                translationAbbrev,
+                                { source: "manual", confidence: result.similarity },
+                              )
+                            )
                           }}
                         >
                           <PlusIcon className="size-3" />

@@ -14,6 +14,7 @@ import {
 import { useTauriEvent } from "@/hooks/use-tauri-event"
 import { useTranscription } from "@/hooks/use-transcription"
 import { bibleActions } from "@/hooks/use-bible"
+import { verseToContentItem } from "@/hooks/use-broadcast"
 import type { DetectionResult, ReadingAdvance } from "@/types"
 
 /**
@@ -129,11 +130,7 @@ export function TranscriptPanel() {
         // avoid re-adding "Mark 1:1" when "Mark 1:2" already exists from a
         // previous chapter-only → refinement cycle.
         const dupIdx = d.is_chapter_only
-          ? queue.items.findIndex(
-              (i) =>
-                i.verse.book_number === d.book_number &&
-                i.verse.chapter === d.chapter,
-            )
+          ? queue.findVerseInChapter(d.book_number, d.chapter)
           : queue.findDuplicate(d.book_number, d.chapter, d.verse)
         if (dupIdx !== -1) {
           const existing = queue.items[dupIdx]
@@ -141,24 +138,17 @@ export function TranscriptPanel() {
           if (!d.is_chapter_only) queue.setActive(dupIdx)
           continue
         }
-        queue.addItem({
-          id: crypto.randomUUID(),
-          verse: {
-            id: 0,
-            translation_id: 1,
-            book_number: d.book_number,
-            book_name: d.book_name,
-            book_abbreviation: "",
-            chapter: d.chapter,
-            verse: d.verse,
-            text: d.verse_text,
-          },
-          reference: d.verse_ref,
-          confidence: d.confidence,
-          source: d.source === "direct" ? "ai-direct" : "ai-semantic",
-          added_at: Date.now(),
-          is_chapter_only: d.is_chapter_only,
-        })
+        const translation = useBibleStore.getState().translations.find(
+          (t) => t.id === useBibleStore.getState().activeTranslationId)?.abbreviation ?? "KJV"
+        queue.addItem(
+          verseToContentItem(
+            { id: 0, translation_id: 1, book_number: d.book_number, book_name: d.book_name,
+              book_abbreviation: "", chapter: d.chapter, verse: d.verse, text: d.verse_text },
+            translation,
+            { source: d.source === "direct" ? "ai-direct" : "ai-semantic",
+              confidence: d.confidence, is_chapter_only: d.is_chapter_only },
+          ),
+        )
       }
     }
   })

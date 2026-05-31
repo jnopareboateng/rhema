@@ -5,7 +5,7 @@ import { PlayIcon, PlusIcon } from "lucide-react"
 import { useDetection, detectionActions } from "@/hooks/use-detection"
 import { bibleActions } from "@/hooks/use-bible"
 import { useQueueStore, useBroadcastStore, useBibleStore } from "@/stores"
-import { toVerseRenderData } from "@/hooks/use-broadcast"
+import { verseToContentItem } from "@/hooks/use-broadcast"
 import type { DetectionResult } from "@/types"
 
 const SOURCE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -43,17 +43,19 @@ function DetectionCard({ detection }: { detection: DetectionResult }) {
         detection.verse
       )
     }
-    // Set broadcast live verse
+    // Set broadcast live verse (bridge: setLiveVerse until Task 6)
     const translation = useBibleStore.getState().translations
       .find(t => t.id === useBibleStore.getState().activeTranslationId)?.abbreviation ?? "KJV"
-    useBroadcastStore.getState().setLiveVerse(
-      toVerseRenderData({
-        id: 0, translation_id: useBibleStore.getState().activeTranslationId,
+    const src = detection.source === "direct" ? "ai-direct" : "ai-semantic"
+    const item = verseToContentItem(
+      { id: 0, translation_id: useBibleStore.getState().activeTranslationId,
         book_number: detection.book_number, book_name: detection.book_name,
-        book_abbreviation: "", chapter: detection.chapter,
-        verse: detection.verse, text: detection.verse_text,
-      }, translation)
+        book_abbreviation: "", chapter: detection.chapter, verse: detection.verse,
+        text: detection.verse_text },
+      translation,
+      { source: src, confidence: detection.confidence, is_chapter_only: detection.is_chapter_only },
     )
+    useBroadcastStore.getState().setLiveVerse(item.slides[0])
   }
 
   return (
@@ -82,23 +84,20 @@ function DetectionCard({ detection }: { detection: DetectionResult }) {
           size="sm"
           className="gap-1"
           onClick={() => {
-            useQueueStore.getState().addItem({
-              id: crypto.randomUUID(),
-              verse: {
-                id: 0,
-                translation_id: useBibleStore.getState().activeTranslationId,
-                book_number: detection.book_number,
-                book_name: detection.book_name,
-                book_abbreviation: "",
-                chapter: detection.chapter,
-                verse: detection.verse,
-                text: detection.verse_text,
-              },
-              reference: detection.verse_ref,
-              confidence: detection.confidence,
-              source: detection.source === "direct" ? "ai-direct" : "ai-semantic",
-              added_at: Date.now(),
-            })
+            const translationAbbrev = useBibleStore.getState().translations
+              .find((t) => t.id === useBibleStore.getState().activeTranslationId)?.abbreviation ?? "KJV"
+            useQueueStore.getState().addItem(
+              verseToContentItem(
+                { id: 0, translation_id: useBibleStore.getState().activeTranslationId,
+                  book_number: detection.book_number, book_name: detection.book_name,
+                  book_abbreviation: "", chapter: detection.chapter, verse: detection.verse,
+                  text: detection.verse_text },
+                translationAbbrev,
+                { source: detection.source === "direct" ? "ai-direct" : "ai-semantic",
+                  confidence: detection.confidence,
+                  is_chapter_only: detection.is_chapter_only },
+              )
+            )
           }}
         >
           <PlusIcon className="size-3" />

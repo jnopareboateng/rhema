@@ -8,9 +8,8 @@ import {
   GripVerticalIcon,
 } from "lucide-react"
 import { useQueueStore, useBroadcastStore, useBibleStore } from "@/stores"
-import { toVerseRenderData } from "@/hooks/use-broadcast"
 import { bibleActions } from "@/hooks/use-bible"
-import type { QueueItem } from "@/types"
+import type { ContentItem } from "@/types"
 
 function QueueItemRow({
   item,
@@ -18,17 +17,25 @@ function QueueItemRow({
   isActive,
   isHighlighted,
 }: {
-  item: QueueItem
+  item: ContentItem
   index: number
   isActive: boolean
   isHighlighted: boolean
 }) {
   const handlePresent = () => {
+    if (item.kind !== "verse") {
+      useBroadcastStore.getState().setLiveVerse(item.slides[0] ?? null)
+      useQueueStore.getState().setActive(index)
+      return
+    }
     useQueueStore.getState().setActive(index)
-    bibleActions.selectVerse(item.verse)
-    const translation = useBibleStore.getState().translations
-      .find(t => t.id === useBibleStore.getState().activeTranslationId)?.abbreviation ?? "KJV"
-    useBroadcastStore.getState().setLiveVerse(toVerseRenderData(item.verse, translation))
+    bibleActions.selectVerse({
+      id: 0, translation_id: useBibleStore.getState().activeTranslationId,
+      book_number: item.verseRef.book_number, book_name: item.verseRef.book_name,
+      book_abbreviation: "", chapter: item.verseRef.chapter, verse: item.verseRef.verse,
+      text: item.slides[0]?.segments[0]?.text ?? "",
+    })
+    useBroadcastStore.getState().setLiveVerse(item.slides[0] ?? null)
   }
 
   const handleRemove = () => {
@@ -66,7 +73,7 @@ function QueueItemRow({
       />
 
       <span className="flex-1 truncate text-sm font-medium text-foreground">
-        {item.reference}
+        {item.title}
       </span>
 
       {sourceBadge}
