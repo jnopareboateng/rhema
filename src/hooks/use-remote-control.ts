@@ -5,7 +5,7 @@ import { useBroadcastStore } from "@/stores/broadcast-store"
 import { useBibleStore } from "@/stores/bible-store"
 import { useQueueStore } from "@/stores/queue-store"
 import { useSettingsStore } from "@/stores/settings-store"
-import { toVerseRenderData } from "@/hooks/use-broadcast"
+import { verseToContentItem } from "@/hooks/use-broadcast"
 import type { Verse } from "@/types"
 
 /**
@@ -133,17 +133,14 @@ export function useRemoteControl() {
 }
 
 /**
- * Find the index of the currently displayed verse in the queue.
- * Returns null if the live verse doesn't match any queue item.
+ * Find the index of the currently displayed item in the queue.
+ * Returns null if the live item doesn't match any queue item.
  */
 function findCurrentVerseIndex(): number | null {
-  const { liveVerse } = useBroadcastStore.getState()
-  if (!liveVerse) return null
-
+  const { liveItem } = useBroadcastStore.getState()
+  if (!liveItem) return null
   const { items } = useQueueStore.getState()
-  const index = items.findIndex(
-    (item) => item.reference === liveVerse.reference
-  )
+  const index = items.findIndex((item) => item.id === liveItem.id)
   return index >= 0 ? index : null
 }
 
@@ -156,30 +153,32 @@ async function presentQueueItem(index: number) {
     const { items } = useQueueStore.getState()
     const item = items[index]
     if (!item) return
-
-    const { verse } = item
-
-    // Fetch the full verse from the backend to ensure we have complete data
-    // (AI-detected queue items may have partial verse objects)
+    if (item.kind !== "verse") {
+      useBroadcastStore.getState().presentItem(item)
+      return
+    }
     const fullVerse = await invoke<Verse | null>("get_verse", {
       translationId: useBibleStore.getState().activeTranslationId,
-      bookNumber: verse.book_number,
-      chapter: verse.chapter,
-      verse: verse.verse,
+      bookNumber: item.verseRef.book_number,
+      chapter: item.verseRef.chapter,
+      verse: item.verseRef.verse,
     })
-
-    const verseToPresent = fullVerse ?? verse
-
     const bibleState = useBibleStore.getState()
-    const translation =
-      bibleState.translations.find(
-        (t) => t.id === bibleState.activeTranslationId
-      )?.abbreviation ?? "KJV"
-
+    const translation = bibleState.translations.find(
+      (t) => t.id === bibleState.activeTranslationId)?.abbreviation ?? "KJV"
+    const verseToPresent: Verse = fullVerse ?? {
+      id: 0, translation_id: bibleState.activeTranslationId,
+      book_number: item.verseRef.book_number, book_name: item.verseRef.book_name,
+      book_abbreviation: "", chapter: item.verseRef.chapter, verse: item.verseRef.verse,
+      text: item.slides[0]?.segments[0]?.text ?? "",
+    }
     bibleState.selectVerse(verseToPresent)
-    useBroadcastStore
-      .getState()
-      .setLiveVerse(toVerseRenderData(verseToPresent, translation))
+    useBroadcastStore.getState().presentItem(
+      verseToContentItem(verseToPresent, translation, {
+        id: item.id, source: item.source, confidence: item.confidence,
+        is_chapter_only: item.verseRef.is_chapter_only,
+      }),
+    )
   } catch (e) {
     console.warn("[remote-control] presentQueueItem failed:", e)
   }
@@ -200,7 +199,9 @@ function syncStatusSnapshot() {
   invoke("update_remote_status", {
     onAir: broadcast.isLive,
     activeTheme: activeTheme?.name ?? null,
-    liveVerse: broadcast.liveVerse?.reference ?? null,
+    liveVerse: broadcast.liveItem
+      ? (broadcast.liveItem.slides[broadcast.currentSlideIndex]?.reference ?? broadcast.liveItem.title)
+      : null,
     queueLength: queue.items.length,
     confidenceThreshold: settings.confidenceThreshold,
   }).catch(() => {

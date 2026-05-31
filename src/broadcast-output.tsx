@@ -3,7 +3,8 @@ import { useRef, useEffect, useCallback } from "react"
 import { invoke } from "@tauri-apps/api/core"
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow"
 import { renderSlide } from "@/lib/verse-renderer"
-import type { BroadcastTheme, VerseRenderData } from "@/types/broadcast"
+import type { BroadcastTheme } from "@/types/broadcast"
+import type { Slide } from "@/types/slide"
 import type { NdiConfigEventPayload, NdiFrameRequest } from "@/types"
 
 /** Convert Uint8Array/Uint8ClampedArray to base64 using Function.apply (avoids spread stack overflow) */
@@ -26,7 +27,7 @@ const OUTPUT_ID = new URLSearchParams(window.location.search).get("output") ?? "
 
 interface BroadcastPayload {
   theme: BroadcastTheme
-  verse: VerseRenderData | null
+  slide: Slide | null
 }
 
 function BroadcastCanvas() {
@@ -66,10 +67,10 @@ function BroadcastCanvas() {
       return
     }
 
-    const { theme, verse } = data
+    const { theme, slide } = data
     canvas.width = theme.resolution.width
     canvas.height = theme.resolution.height
-    const result = renderSlide(ctx, theme, verse, {
+    const result = renderSlide(ctx, theme, slide, {
       scale: 1,
       imageCache: imageCacheRef.current,
     })
@@ -172,11 +173,11 @@ function BroadcastCanvas() {
 
     const currentWindow = getCurrentWebviewWindow()
     logDebug("Listener registration started", { label: currentWindow.label })
-    const unlisten = currentWindow.listen<BroadcastPayload>("broadcast:verse-update", (event) => {
+    const unlisten = currentWindow.listen<BroadcastPayload>("broadcast:render-update", (event) => {
       latestData.current = event.payload
       preloadBackgroundImage(event.payload.theme)
-      logDebug("Received broadcast:verse-update", {
-        hasVerse: Boolean(event.payload.verse),
+      logDebug("Received broadcast:render-update", {
+        hasSlide: Boolean(event.payload.slide),
         themeId: event.payload.theme.id,
       })
       draw()

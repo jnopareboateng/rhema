@@ -1,17 +1,23 @@
 import { create } from "zustand"
 import { emitTo } from "@tauri-apps/api/event"
 import { load, type Store } from "@tauri-apps/plugin-store"
-import type { BroadcastTheme, VerseRenderData } from "@/types"
+import type { BroadcastTheme, ContentItem, Slide } from "@/types"
 import { BUILTIN_THEMES } from "@/lib/builtin-themes"
 
 type SelectedElement = "verse" | "reference" | null
+
+function liveSlideOf(s: BroadcastState): Slide | null {
+  if (!s.isLive || !s.liveItem) return null
+  return s.liveItem.slides[s.currentSlideIndex] ?? null
+}
 
 interface BroadcastState {
   themes: BroadcastTheme[]
   activeThemeId: string
   altActiveThemeId: string
   isLive: boolean
-  liveVerse: VerseRenderData | null
+  liveItem: ContentItem | null
+  currentSlideIndex: number
 
   // Designer state
   isDesignerOpen: boolean
@@ -31,7 +37,11 @@ interface BroadcastState {
   setActiveTheme: (id: string) => void
   setAltActiveTheme: (id: string) => void
   setLive: (live: boolean) => void
-  setLiveVerse: (verse: VerseRenderData | null) => void
+  presentItem: (item: ContentItem) => void
+  nextSlide: () => void
+  prevSlide: () => void
+  goToSlide: (i: number) => void
+  clearLive: () => void
   syncBroadcastOutput: () => void
   syncBroadcastOutputFor: (outputId: string) => void
 
@@ -81,15 +91,15 @@ function emitDraftToBroadcast(state: BroadcastState): void {
   if (!state.draftTheme) return
   const id = state.editingThemeId
   if (id === state.activeThemeId) {
-    void emitTo("broadcast", "broadcast:verse-update", {
+    void emitTo("broadcast", "broadcast:render-update", {
       theme: state.draftTheme,
-      verse: state.liveVerse,
+      slide: liveSlideOf(state),
     }).catch(() => {})
   }
   if (id === state.altActiveThemeId) {
-    void emitTo("broadcast-alt", "broadcast:verse-update", {
+    void emitTo("broadcast-alt", "broadcast:render-update", {
       theme: state.draftTheme,
-      verse: state.liveVerse,
+      slide: liveSlideOf(state),
     }).catch(() => {})
   }
 }
@@ -99,7 +109,8 @@ export const useBroadcastStore = create<BroadcastState>((set, get) => ({
   activeThemeId: BUILTIN_THEMES[0].id,
   altActiveThemeId: BUILTIN_THEMES[0].id,
   isLive: false,
-  liveVerse: null,
+  liveItem: null,
+  currentSlideIndex: 0,
   isDesignerOpen: false,
   editingThemeId: null,
   renamingThemeId: null,
@@ -173,9 +184,9 @@ export const useBroadcastStore = create<BroadcastState>((set, get) => ({
     const theme = s.themes.find((t) => t.id === themeId) ?? s.themes[0]
     if (!theme) return
 
-    void emitTo(label, "broadcast:verse-update", {
+    void emitTo(label, "broadcast:render-update", {
       theme,
-      verse: s.liveVerse,
+      slide: liveSlideOf(s),
     }).catch(() => {})
   },
   syncBroadcastOutput: () => {
@@ -190,11 +201,22 @@ export const useBroadcastStore = create<BroadcastState>((set, get) => ({
     set({ altActiveThemeId })
     get().syncBroadcastOutputFor("alt")
   },
-  setLive: (isLive) => set({ isLive }),
-  setLiveVerse: (liveVerse) => {
-    set({ liveVerse })
-    get().syncBroadcastOutput()
+  setLive: (isLive) => { set({ isLive }); get().syncBroadcastOutput() },
+  presentItem: (item) => { set({ liveItem: item, currentSlideIndex: 0, isLive: true }); get().syncBroadcastOutput() },
+  nextSlide: () => {
+    const s = get(); if (!s.liveItem) return
+    const max = s.liveItem.slides.length - 1
+    set({ currentSlideIndex: Math.min(s.currentSlideIndex + 1, max) }); get().syncBroadcastOutput()
   },
+  prevSlide: () => {
+    set({ currentSlideIndex: Math.max(get().currentSlideIndex - 1, 0) }); get().syncBroadcastOutput()
+  },
+  goToSlide: (i) => {
+    const s = get(); if (!s.liveItem) return
+    const max = s.liveItem.slides.length - 1
+    set({ currentSlideIndex: Math.min(Math.max(i, 0), max) }); get().syncBroadcastOutput()
+  },
+  clearLive: () => { set({ liveItem: null, currentSlideIndex: 0 }); get().syncBroadcastOutput() },
 
   // Designer
   setDesignerOpen: (isDesignerOpen) => {

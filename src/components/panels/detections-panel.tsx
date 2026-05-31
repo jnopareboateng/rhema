@@ -43,7 +43,6 @@ function DetectionCard({ detection }: { detection: DetectionResult }) {
         detection.verse
       )
     }
-    // Set broadcast live verse (bridge: setLiveVerse until Task 6)
     const translation = useBibleStore.getState().translations
       .find(t => t.id === useBibleStore.getState().activeTranslationId)?.abbreviation ?? "KJV"
     const src = detection.source === "direct" ? "ai-direct" : "ai-semantic"
@@ -55,7 +54,7 @@ function DetectionCard({ detection }: { detection: DetectionResult }) {
       translation,
       { source: src, confidence: detection.confidence, is_chapter_only: detection.is_chapter_only },
     )
-    useBroadcastStore.getState().setLiveVerse(item.slides[0])
+    useBroadcastStore.getState().presentItem(item)
   }
 
   return (

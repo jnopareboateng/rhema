@@ -1,48 +1,44 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { describe, it, expect, beforeEach } from "vitest"
+import { useBroadcastStore } from "./broadcast-store"
+import { verseToContentItem } from "@/hooks/use-broadcast"
+import type { Verse } from "@/types"
 
-const emitToMock = vi.fn()
+const verse: Verse = { id: 0, translation_id: 1, book_number: 1, book_name: "Genesis",
+  book_abbreviation: "Gen", chapter: 1, verse: 1, text: "In the beginning" }
 
-vi.mock("@tauri-apps/api/event", () => ({
-  emitTo: emitToMock,
-}))
+function multiSlideItem() {
+  const base = verseToContentItem(verse, "KJV")
+  return { ...base, slides: [base.slides[0], { reference: "", segments: [{ text: "slide 2" }] }] }
+}
 
-describe("broadcast store sync", () => {
-  beforeEach(async () => {
-    emitToMock.mockReset()
-    emitToMock.mockResolvedValue(undefined)
-    vi.resetModules()
+beforeEach(() => useBroadcastStore.setState({ liveItem: null, currentSlideIndex: 0, isLive: false }))
+
+describe("broadcast-store live cursor", () => {
+  it("presentItem loads slide 0 and goes on-air", () => {
+    useBroadcastStore.getState().presentItem(verseToContentItem(verse, "KJV"))
+    const s = useBroadcastStore.getState()
+    expect(s.isLive).toBe(true)
+    expect(s.currentSlideIndex).toBe(0)
+    expect(s.liveItem?.slides[0].reference).toBe("Genesis 1:1 (KJV)")
   })
 
-  it("syncBroadcastOutput emits current theme and verse to broadcast window", async () => {
-    const { useBroadcastStore } = await import("./broadcast-store")
-    const theme = useBroadcastStore.getState().themes[0]
-    useBroadcastStore.setState({
-      activeThemeId: theme.id,
-      liveVerse: {
-      reference: "John 3:16",
-        segments: [{ text: "For God so loved the world", verseNumber: 16 }],
-      },
-    })
+  it("nextSlide/prevSlide clamp within bounds", () => {
+    useBroadcastStore.getState().presentItem(multiSlideItem())
+    useBroadcastStore.getState().nextSlide()
+    expect(useBroadcastStore.getState().currentSlideIndex).toBe(1)
+    useBroadcastStore.getState().nextSlide() // clamp at last
+    expect(useBroadcastStore.getState().currentSlideIndex).toBe(1)
+    useBroadcastStore.getState().prevSlide()
+    useBroadcastStore.getState().prevSlide() // clamp at first
+    expect(useBroadcastStore.getState().currentSlideIndex).toBe(0)
+  })
 
-    emitToMock.mockClear()
-    useBroadcastStore.getState().syncBroadcastOutput()
-
-    expect(emitToMock).toHaveBeenCalledTimes(2)
-    expect(emitToMock).toHaveBeenCalledWith(
-      "broadcast",
-      "broadcast:verse-update",
-      expect.objectContaining({
-        theme: expect.objectContaining({ id: theme.id }),
-        verse: expect.objectContaining({ reference: "John 3:16" }),
-      }),
-    )
-    expect(emitToMock).toHaveBeenCalledWith(
-      "broadcast-alt",
-      "broadcast:verse-update",
-      expect.objectContaining({
-        theme: expect.objectContaining({ id: theme.id }),
-        verse: expect.objectContaining({ reference: "John 3:16" }),
-      }),
-    )
+  it("setLive(false) blanks the live slide; clearLive removes content", () => {
+    const { presentItem, setLive, clearLive } = useBroadcastStore.getState()
+    presentItem(verseToContentItem(verse, "KJV"))
+    setLive(false)
+    expect(useBroadcastStore.getState().isLive).toBe(false)
+    clearLive()
+    expect(useBroadcastStore.getState().liveItem).toBeNull()
   })
 })

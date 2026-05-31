@@ -23,19 +23,16 @@ function QueueItemRow({
   isHighlighted: boolean
 }) {
   const handlePresent = () => {
-    if (item.kind !== "verse") {
-      useBroadcastStore.getState().setLiveVerse(item.slides[0] ?? null)
-      useQueueStore.getState().setActive(index)
-      return
-    }
     useQueueStore.getState().setActive(index)
-    bibleActions.selectVerse({
-      id: 0, translation_id: useBibleStore.getState().activeTranslationId,
-      book_number: item.verseRef.book_number, book_name: item.verseRef.book_name,
-      book_abbreviation: "", chapter: item.verseRef.chapter, verse: item.verseRef.verse,
-      text: item.slides[0]?.segments[0]?.text ?? "",
-    })
-    useBroadcastStore.getState().setLiveVerse(item.slides[0] ?? null)
+    if (item.kind === "verse") {
+      bibleActions.selectVerse({
+        id: 0, translation_id: useBibleStore.getState().activeTranslationId,
+        book_number: item.verseRef.book_number, book_name: item.verseRef.book_name,
+        book_abbreviation: "", chapter: item.verseRef.chapter, verse: item.verseRef.verse,
+        text: item.slides[0]?.segments[0]?.text ?? "",
+      })
+    }
+    useBroadcastStore.getState().presentItem(item)
   }
 
   const handleRemove = () => {

@@ -28,11 +28,12 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { importTheme, exportTheme } from "@/lib/theme-designer-files"
-import type { BroadcastTheme, VerseRenderData } from "@/types"
+import type { BroadcastTheme } from "@/types"
+import type { Slide } from "@/types/slide"
 
 type FilterTab = "all" | "pinned" | "custom"
 
-const THUMBNAIL_VERSE: VerseRenderData = {
+const THUMBNAIL_VERSE: Slide = {
   reference: "John 3:16 (KJV)",
   segments: [{ text: "Sample Verse" }],
 }
