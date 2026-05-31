@@ -10,6 +10,14 @@ export type { DetectionResult, DetectionStatus, ReadingAdvance, SemanticSearchRe
 export type { BroadcastTheme, VerseRenderData, VerseSegment, RenderOptions } from "./broadcast"
 export type { Slide, Segment, SlideMedia } from "./slide"
 export type {
+  ContentItem,
+  VerseContentItem,
+  LyricsContentItem,
+  MediaContentItem,
+  ContentKind,
+  ContentSource,
+} from "./content"
+export type {
   NdiAlphaMode,
   NdiConfigEventPayload,
   NdiFrameRate,

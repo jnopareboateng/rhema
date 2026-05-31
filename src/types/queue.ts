@@ -10,3 +10,5 @@ export interface QueueItem {
   /** True when queued from a chapter-only detection (verse defaults to 1, may be refined). */
   is_chapter_only?: boolean
 }
+
+export type { ContentItem } from "./content"
