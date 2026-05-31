@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback, memo } from "react"
-import { renderVerse } from "@/lib/verse-renderer"
+import { renderSlide } from "@/lib/verse-renderer"
 import type { BroadcastTheme, VerseRenderData } from "@/types"
 import { cn } from "@/lib/utils"
 
@@ -50,7 +50,7 @@ export const CanvasVerse = memo(function CanvasVerse({
 
     ctx.scale(dpr, dpr)
     const scale = displayW / theme.resolution.width
-    renderVerse(ctx, theme, verse, {
+    renderSlide(ctx, theme, verse, {
       scale,
       imageCache: imageCacheRef.current,
     })

@@ -1,8 +1,5 @@
-import type {
-  BroadcastTheme,
-  VerseRenderData,
-  RenderOptions,
-} from "@/types/broadcast"
+import type { BroadcastTheme, RenderOptions } from "@/types/broadcast"
+import type { Slide } from "@/types/slide"
 
 export interface VerseLayoutRect {
   x: number
@@ -417,7 +414,7 @@ function drawReference(
 function drawVerseText(
   ctx: CanvasRenderingContext2D,
   theme: BroadcastTheme,
-  verse: VerseRenderData,
+  verse: Slide,
   textRectX: number,
   textRectWidth: number,
   startY: number,
@@ -653,7 +650,7 @@ function calculateMaxAvailableVerseHeight(
 function calculateScaledFontSize(
   ctx: CanvasRenderingContext2D,
   theme: BroadcastTheme,
-  verse: VerseRenderData,
+  verse: Slide,
   textRectWidth: number,
   maxHeight: number
 ): number {
@@ -697,7 +694,7 @@ function calculateScaledFontSize(
 function measureVerseHeight(
   ctx: CanvasRenderingContext2D,
   theme: BroadcastTheme,
-  verse: VerseRenderData,
+  verse: Slide,
   textRectWidth: number
 ): { height: number; maxLineWidth: number } {
   const vt = theme.verseText
@@ -769,7 +766,7 @@ function rectForAlignedText(
 export function computeVerseLayoutMetrics(
   ctx: CanvasRenderingContext2D,
   theme: BroadcastTheme,
-  verse: VerseRenderData | null,
+  verse: Slide | null,
   options?: RenderOptions
 ): VerseLayoutMetrics {
   const scale = options?.scale ?? 1
@@ -948,24 +945,24 @@ export function computeVerseLayoutMetrics(
   return { scaledTheme, textAreaRect, textRect, referenceRect, verseRect }
 }
 
-export function renderVerse(
+export function renderSlide(
   ctx: CanvasRenderingContext2D,
   theme: BroadcastTheme,
-  verse: VerseRenderData | null,
-  options?: RenderOptions
+  verse: Slide | null,
+  options?: RenderOptions,
 ): VerseLayoutMetrics | null {
   try {
-    return renderVerseImpl(ctx, theme, verse, options)
+    return renderSlideImpl(ctx, theme, verse, options)
   } catch (e) {
-    console.error("[verse-renderer] render error:", e)
+    console.error("[slide-renderer] render error:", e)
     return null
   }
 }
 
-function renderVerseImpl(
+function renderSlideImpl(
   ctx: CanvasRenderingContext2D,
   theme: BroadcastTheme,
-  verse: VerseRenderData | null,
+  verse: Slide | null,
   options?: RenderOptions
 ): VerseLayoutMetrics {
   const metrics = computeVerseLayoutMetrics(ctx, theme, verse, options)

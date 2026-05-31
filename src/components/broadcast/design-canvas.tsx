@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import * as fabric from "fabric"
 import { useBroadcastStore } from "@/stores"
-import { renderVerse } from "@/lib/verse-renderer"
+import { renderSlide } from "@/lib/verse-renderer"
 import { Button } from "@/components/ui/button"
 import {
   SearchIcon,
@@ -504,13 +504,13 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 function renderThemeBitmap(
   theme: BroadcastTheme,
   imageCache: Map<string, HTMLImageElement>
-): { bitmap: HTMLCanvasElement; metrics: ReturnType<typeof renderVerse> } {
+): { bitmap: HTMLCanvasElement; metrics: ReturnType<typeof renderSlide> } {
   const offscreen = document.createElement("canvas")
   offscreen.width = WS_WIDTH
   offscreen.height = WS_HEIGHT
   const ctx = offscreen.getContext("2d")
   if (!ctx) return { bitmap: offscreen, metrics: null }
 
-  const metrics = renderVerse(ctx, theme, DESIGNER_SAMPLE_VERSE, { imageCache })
+  const metrics = renderSlide(ctx, theme, DESIGNER_SAMPLE_VERSE, { imageCache })
   return { bitmap: offscreen, metrics }
 }

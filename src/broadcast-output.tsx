@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client"
 import { useRef, useEffect, useCallback } from "react"
 import { invoke } from "@tauri-apps/api/core"
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow"
-import { renderVerse } from "@/lib/verse-renderer"
+import { renderSlide } from "@/lib/verse-renderer"
 import type { BroadcastTheme, VerseRenderData } from "@/types/broadcast"
 import type { NdiConfigEventPayload, NdiFrameRequest } from "@/types"
 
@@ -69,14 +69,14 @@ function BroadcastCanvas() {
     const { theme, verse } = data
     canvas.width = theme.resolution.width
     canvas.height = theme.resolution.height
-    const result = renderVerse(ctx, theme, verse, {
+    const result = renderSlide(ctx, theme, verse, {
       scale: 1,
       imageCache: imageCacheRef.current,
     })
     if (!result) {
       ctx.fillStyle = "#000"
       ctx.fillRect(0, 0, canvas.width, canvas.height)
-      logDebug("renderVerse returned null; drew fallback frame")
+      logDebug("renderSlide returned null; drew fallback frame")
     }
   }, [logDebug])
 
