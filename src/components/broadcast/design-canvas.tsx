@@ -11,11 +11,11 @@ import {
   Grid3X3Icon,
   MaximizeIcon,
 } from "lucide-react"
-import type { BroadcastTheme, VerseRenderData } from "@/types"
+import type { BroadcastTheme, Slide } from "@/types"
 
 const WS_WIDTH = 1920
 const WS_HEIGHT = 1080
-const DESIGNER_SAMPLE_VERSE: VerseRenderData = {
+const DESIGNER_SAMPLE_VERSE: Slide = {
   reference: "Genesis 1:1 (KJV)",
   segments: [{ verseNumber: 1, text: "In the beginning God created the heaven and the earth." }],
 }

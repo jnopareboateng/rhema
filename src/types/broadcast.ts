@@ -1,10 +1,3 @@
-import type { Slide, Segment } from "./slide"
-
-/** @deprecated use Segment from "./slide" — alias kept until call sites migrate (M1 Task 8). */
-export type VerseSegment = Segment
-/** @deprecated use Slide from "./slide" — alias kept until call sites migrate (M1 Task 8). */
-export type VerseRenderData = Slide
-
 export interface RenderOptions {
   opacity?: number
   offsetX?: number

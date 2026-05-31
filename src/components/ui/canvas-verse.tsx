@@ -1,11 +1,11 @@
 import { useRef, useEffect, useState, useCallback, memo } from "react"
 import { renderSlide } from "@/lib/verse-renderer"
-import type { BroadcastTheme, VerseRenderData } from "@/types"
+import type { BroadcastTheme, Slide } from "@/types"
 import { cn } from "@/lib/utils"
 
 interface CanvasVerseProps {
   theme: BroadcastTheme
-  verse: VerseRenderData | null
+  verse: Slide | null
   className?: string
 }
 
