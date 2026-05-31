@@ -3,6 +3,7 @@ import { CanvasVerse } from "@/components/ui/canvas-verse"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import { useBroadcastStore } from "@/stores"
+import { SlideTransport } from "@/components/controls/slide-transport"
 
 export function LiveOutputPanel() {
   const isLive = useBroadcastStore((s) => s.isLive)
@@ -23,15 +24,18 @@ export function LiveOutputPanel() {
       )}
     >
       <PanelHeader title="Live display">
-        <label className="flex items-center gap-2">
-          <span className={cn("text-[0.625rem] font-medium uppercase tracking-wider transition-colors",
-            isLive ? "text-emerald-400" : "text-muted-foreground")}>
-            {isLive ? "Live" : "Go live"}
-          </span>
-          <Switch checked={isLive}
-            onCheckedChange={(checked) => useBroadcastStore.getState().setLive(checked)}
-            className="data-[state=checked]:bg-emerald-500" />
-        </label>
+        <div className="flex items-center gap-3">
+          <SlideTransport />
+          <label className="flex items-center gap-2">
+            <span className={cn("text-[0.625rem] font-medium uppercase tracking-wider transition-colors",
+              isLive ? "text-emerald-400" : "text-muted-foreground")}>
+              {isLive ? "Live" : "Go live"}
+            </span>
+            <Switch checked={isLive}
+              onCheckedChange={(checked) => useBroadcastStore.getState().setLive(checked)}
+              className="data-[state=checked]:bg-emerald-500" />
+          </label>
+        </div>
       </PanelHeader>
       <div className={cn("flex min-h-0 flex-1 items-center justify-center p-3 transition-opacity",
         !isLive && "opacity-40")}>
