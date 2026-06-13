@@ -16,6 +16,7 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, "index.html"),
         broadcast: path.resolve(__dirname, "broadcast-output.html"),
+        stage: path.resolve(__dirname, "stage-display.html"),
       },
     },
   },
