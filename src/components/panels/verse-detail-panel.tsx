@@ -159,11 +159,16 @@ export function VerseDetailPanel({ stagedItem, setStagedItem }: VerseDetailPanel
       {/* ── Empty state ── */}
       {!verseItem ? (
         <div className="flex flex-1 items-center justify-center p-6">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <BookOpen className="size-8 text-muted-foreground/20" />
-            <p className="text-[0.6875rem] text-muted-foreground/60">
-              Select a verse to see chapter context
-            </p>
+          <div className="flex flex-col items-center gap-3 text-center">
+            <BookOpen className="size-8 text-muted-foreground/15" />
+            <div className="flex flex-col gap-1">
+              <p className="text-[0.6875rem] font-medium text-muted-foreground/60">
+                Select a verse to see chapter context
+              </p>
+              <p className="text-[0.5625rem] text-muted-foreground/35 leading-relaxed">
+                Double-click to send live · ← → to navigate
+              </p>
+            </div>
           </div>
         </div>
       ) : (
@@ -226,14 +231,14 @@ export function VerseDetailPanel({ stagedItem, setStagedItem }: VerseDetailPanel
           </ScrollArea>
 
           {/* ── Action bar ── */}
-          <div className="flex shrink-0 items-center gap-1.5 border-t border-border bg-card/80 px-2.5 py-2">
+          <div className="flex shrink-0 items-center gap-1.5 border-t border-border bg-card/80 px-2.5 py-2.5">
             {/* Present Now */}
             <button
               type="button"
               onClick={() => useBroadcastStore.getState().presentItem(stagedItem!)}
               className={cn(
-                "flex h-7 flex-1 items-center justify-center gap-1.5 rounded",
-                "bg-emerald-600/90 px-2 text-[0.6875rem] font-medium text-white",
+                "flex h-8 flex-1 items-center justify-center gap-1.5 rounded",
+                "bg-emerald-600/90 px-2 text-[0.6875rem] font-semibold text-white",
                 "transition-colors hover:bg-emerald-500 active:bg-emerald-700",
               )}
             >
@@ -246,13 +251,13 @@ export function VerseDetailPanel({ stagedItem, setStagedItem }: VerseDetailPanel
               type="button"
               onClick={() => useQueueStore.getState().addItem(stagedItem!)}
               className={cn(
-                "flex h-7 flex-1 items-center justify-center gap-1.5 rounded",
+                "flex h-8 flex-1 items-center justify-center gap-1.5 rounded",
                 "border border-border bg-transparent px-2 text-[0.6875rem] text-muted-foreground",
                 "transition-colors hover:bg-foreground/5 hover:text-foreground",
               )}
             >
               <ListPlus className="size-3" />
-              Queue
+              Add to Queue
             </button>
 
             {/* Copy Text */}
@@ -268,7 +273,7 @@ export function VerseDetailPanel({ stagedItem, setStagedItem }: VerseDetailPanel
                 void navigator.clipboard.writeText(text)
               }}
               className={cn(
-                "flex h-7 w-8 shrink-0 items-center justify-center rounded",
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded",
                 "border border-border bg-transparent text-muted-foreground",
                 "transition-colors hover:bg-foreground/5 hover:text-foreground",
               )}
