@@ -53,3 +53,11 @@ ghs.json
 
 # GSD planning artifacts
 .planning/
+screenshots/*
+
+# SQLite WAL sidecars (db itself ignored above)
+data/rhema.db-shm
+data/rhema.db-wal
+
+# Local Playwright QA helpers (machine-specific paths)
+screenshot*.mjs
