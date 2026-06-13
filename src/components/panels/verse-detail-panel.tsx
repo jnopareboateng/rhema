@@ -134,7 +134,7 @@ export function VerseDetailPanel({ stagedItem, setStagedItem }: VerseDetailPanel
     <div
       data-slot="verse-detail-panel"
       className={cn(
-        "flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card",
+        "flex min-h-0 flex-col overflow-hidden rounded-md border border-border bg-card",
       )}
     >
       {/* ── Header ── */}

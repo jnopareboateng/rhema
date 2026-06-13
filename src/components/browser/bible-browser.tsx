@@ -13,10 +13,9 @@ import { cn } from "@/lib/utils"
 import {
   BookOpenIcon,
   SparklesIcon,
-  ArrowLeftIcon,
-  ArrowRightIcon,
   CheckIcon,
   PlusIcon,
+  Loader2,
 } from "lucide-react"
 import {
   Tooltip,
@@ -104,7 +103,6 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
   )
 
   // ── Routing heuristic ────────────────────────────────────────────────────────
-  // Derive autocomplete result during render (no setState cascading).
   const autocompleteResult = useMemo(
     () => getAutocompleteSuggestion(unifiedQuery, books),
     [unifiedQuery, books]
@@ -112,10 +110,9 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
   const quickSuggestion = autocompleteResult.suggestion
 
   /**
-   * "reference" when the query is empty (browse chapter) OR when it parses
-   * as a Bible book/chapter/verse reference (stage !== "none").
-   * "text" when the query has content that doesn't match any book reference —
-   * routes to semantic / Fuse full-text search.
+   * "reference" when the query is empty (browse) OR it parses as a Bible
+   * book/chapter/verse reference (stage !== "none").
+   * "text" when the query has content that doesn't match any book reference.
    */
   const searchMode: "reference" | "text" =
     unifiedQuery.length === 0 || autocompleteResult.stage !== "none"
@@ -134,7 +131,7 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
     }).catch(console.error)
   }, [])
 
-  // Load chapter when book + chapter are set
+  // Load chapter when book + chapter state changes (e.g. translation switch)
   useEffect(() => {
     if (selectedBookNumber && chapter >= 1) {
       bibleActions.loadChapter(selectedBookNumber, chapter).catch(console.error)
@@ -148,7 +145,7 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
     return currentChapter.find((v) => v.verse === selectedVerse.verse)?.id ?? null
   }, [currentChapter, selectedVerseId, selectedVerse])
 
-  // After chapter reloads (e.g. translation change), re-select by verse number
+  // After chapter reloads (translation change), re-select by verse number
   useEffect(() => {
     if (!selectedVerseId || !selectedVerse || currentChapter.length === 0) return
     const stillExists = currentChapter.some((v) => v.id === selectedVerseId)
@@ -159,6 +156,20 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
       }
     }
   }, [currentChapter, selectedVerseId, selectedVerse])
+
+  /**
+   * Focused result: the resolved target verse plus up to one neighbour on each
+   * side for disambiguation context. Only populated when a complete reference
+   * has been typed and the chapter has loaded.
+   */
+  const focusedResultVerses = useMemo(() => {
+    if (!effectiveSelectedVerseId || currentChapter.length === 0) return []
+    const targetIdx = currentChapter.findIndex((v) => v.id === effectiveSelectedVerseId)
+    if (targetIdx === -1) return []
+    const start = Math.max(0, targetIdx - 1)
+    const end = Math.min(currentChapter.length - 1, targetIdx + 1)
+    return currentChapter.slice(start, end + 1)
+  }, [effectiveSelectedVerseId, currentChapter])
 
   const applyNavigationSelection = useCallback(
     (book: Book, navChapter: number) => {
@@ -194,9 +205,6 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
         if (target) {
           setSelectedVerseId(target.id)
           bibleActions.selectVerse(target)
-          document
-            .getElementById(`bb-verse-${target.id}`)
-            ?.scrollIntoView({ behavior: "smooth", block: "center" })
         }
         panelRef.current?.focus()
       }).catch(console.error).finally(() => {
@@ -213,56 +221,6 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
     bibleActions.selectVerse(verse)
     onStage(verseToContentItem(verse, activeTranslationAbbrev, { source: "manual" }))
   }, [onStage, activeTranslationAbbrev])
-
-  // Arrow key chapter/verse navigation (reference mode only)
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "ArrowLeft") {
-        e.preventDefault()
-        e.stopPropagation()
-        if (chapter > 1) {
-          setChapter((c) => c - 1)
-          setSelectedVerseId(null)
-        }
-      } else if (e.key === "ArrowRight") {
-        e.preventDefault()
-        e.stopPropagation()
-        setChapter((c) => c + 1)
-        setSelectedVerseId(null)
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault()
-        if (currentChapter.length === 0) return
-        const currentIdx = effectiveSelectedVerseId
-          ? currentChapter.findIndex((v) => v.id === effectiveSelectedVerseId)
-          : -1
-        const nextIdx = Math.min(currentIdx + 1, currentChapter.length - 1)
-        const next = currentChapter[nextIdx]
-        if (next) {
-          setSelectedVerseId(next.id)
-          bibleActions.selectVerse(next)
-          document
-            .getElementById(`bb-verse-${next.id}`)
-            ?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-        }
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault()
-        if (currentChapter.length === 0) return
-        const currentIdx = effectiveSelectedVerseId
-          ? currentChapter.findIndex((v) => v.id === effectiveSelectedVerseId)
-          : currentChapter.length
-        const prevIdx = Math.max(currentIdx - 1, 0)
-        const prev = currentChapter[prevIdx]
-        if (prev) {
-          setSelectedVerseId(prev.id)
-          bibleActions.selectVerse(prev)
-          document
-            .getElementById(`bb-verse-${prev.id}`)
-            ?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-        }
-      }
-    },
-    [chapter, currentChapter, effectiveSelectedVerseId]
-  )
 
   // ── Text / semantic search ───────────────────────────────────────────────────
   const contextDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -306,7 +264,6 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
         runContextSearch(query, translationId).catch(console.error)
       }, 280)
     } else {
-      // Switched to reference mode or query too short — discard stale results
       contextSearchRequestIdRef.current += 1
       useBibleStore.getState().setSemanticResults([])
     }
@@ -420,7 +377,7 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
     </Select>
   )
 
-  // ── Subtle mode indicator icon (no toggle — just visual feedback) ─────────────
+  // ── Subtle mode indicator icon ────────────────────────────────────────────────
   const modeIcon = searchMode === "reference"
     ? <BookOpenIcon className="size-3.5 shrink-0 text-muted-foreground/50 transition-colors" />
     : <SparklesIcon className="size-3.5 shrink-0 text-lime-400/80 transition-colors" />
@@ -430,7 +387,6 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
       ref={panelRef}
       data-slot="bible-browser"
       className="flex min-h-0 flex-1 flex-col overflow-hidden outline-none"
-      onKeyDown={searchMode === "reference" ? handleKeyDown : undefined}
       tabIndex={-1}
     >
       {/* STICKY: Single unified search row */}
@@ -494,121 +450,178 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
         {translationSelector}
       </div>
 
-      {/* REFERENCE MODE — chapter header + verse list ─────────────────────────── */}
+      {/* REFERENCE MODE — focused verse result ──────────────────────────────────
+          Shows the resolved verse + up to 1 neighbour on each side as a search-
+          result card. The full chapter reading view lives exclusively in Verse Detail. */}
       {searchMode === "reference" && (
-        <>
-          {/* STICKY: Chapter title + prev/next nav */}
-          <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2 min-h-9">
-            {selectedBook && (
-              <h3 className="text-sm font-semibold text-foreground">
-                {selectedBook.name} {chapter}
-              </h3>
-            )}
-            {selectedBook && (
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={() => {
-                    if (chapter > 1) {
-                      setChapter((c) => c - 1)
-                      setSelectedVerseId(null)
-                    }
-                  }}
-                  disabled={chapter <= 1}
-                >
-                  <ArrowLeftIcon className="size-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={() => {
-                    setChapter((c) => c + 1)
-                    setSelectedVerseId(null)
-                  }}
-                >
-                  <ArrowRightIcon className="size-3" />
-                </Button>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+
+          {/* Empty state: no query typed yet */}
+          {!unifiedQuery && (
+            <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
+              <BookOpenIcon className="size-7 text-muted-foreground/20" />
+              <p className="text-[0.6875rem] text-muted-foreground/50">
+                Type a reference like{" "}
+                <span className="font-mono text-muted-foreground/70">Jn 3:16</span>
+              </p>
+            </div>
+          )}
+
+          {/* Partial reference: book / chapter typed, waiting for verse */}
+          {unifiedQuery &&
+            autocompleteResult.stage !== "complete" &&
+            autocompleteResult.stage !== "none" && (
+              <div className="flex items-center justify-center p-8">
+                <p className="text-[0.6875rem] text-muted-foreground/50">
+                  Keep typing to resolve a verse…
+                </p>
               </div>
             )}
-          </div>
 
-          {/* SCROLLABLE: Verse list */}
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <div className="flex flex-col gap-0 p-2">
-              {currentChapter.map((verse) => (
-                <div
-                  key={verse.id}
-                  id={`bb-verse-${verse.id}`}
-                  onClick={() => handleVerseClick(verse)}
-                  className={cn(
-                    "group flex cursor-pointer items-center gap-3 rounded-lg p-3 transition-colors",
-                    verse.id === effectiveSelectedVerseId
-                      ? "border border-lime-500/50 bg-lime-500/10"
-                      : "border border-transparent hover:bg-muted/50"
-                  )}
-                >
-                  <span className="w-6 shrink-0 text-right text-sm font-semibold text-primary">
-                    {verse.verse}
+          {/* Loading: complete reference parsed but chapter not yet loaded */}
+          {unifiedQuery &&
+            autocompleteResult.stage === "complete" &&
+            focusedResultVerses.length === 0 && (
+              <div className="flex items-center justify-center gap-2 p-8 text-[0.6875rem] text-muted-foreground/50">
+                <Loader2 className="size-3 animate-spin" />
+                Loading…
+              </div>
+            )}
+
+          {/* Focused result: resolved reference with loaded verses */}
+          {unifiedQuery &&
+            autocompleteResult.stage === "complete" &&
+            focusedResultVerses.length > 0 && (
+              <div className="p-2">
+                {/* Result label row */}
+                <div className="mb-1.5 flex items-center gap-1.5 px-0.5">
+                  <span className="text-[0.5625rem] uppercase tracking-wider text-muted-foreground/40">
+                    Result
                   </span>
-                  <p className="flex-1 text-sm leading-relaxed text-foreground/80">
-                    {verse.text}
-                  </p>
-                  {queuedVerseKeys.has(`${verse.book_number}:${verse.chapter}:${verse.verse}`) ? (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span
-                            className="flex size-6 shrink-0 cursor-pointer items-center justify-center"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              const store = useQueueStore.getState()
-                              const idx = store.findDuplicate(verse.book_number, verse.chapter, verse.verse)
-                              if (idx !== -1) {
-                                store.flashItem(store.items[idx].id)
-                                document.querySelector(`[data-slot="service-queue"] [data-queue-idx="${idx}"]`)
-                                  ?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-                              }
-                            }}
-                          >
-                            <CheckIcon className="size-4 text-ai-direct" />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="left">Already in queue</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  ) : (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            className={cn(
-                              "shrink-0 opacity-0 group-hover:opacity-100 transition-opacity",
-                              verse.id === effectiveSelectedVerseId
-                                ? "hover:bg-lime-500/20 hover:text-lime-500"
-                                : "bg-primary/40! text-primary-foreground hover:bg-primary!"
-                            )}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              useQueueStore.getState().addItem(
-                                verseToContentItem(verse, activeTranslationAbbrev, { source: "manual" })
-                              )
-                            }}
-                          >
-                            <PlusIcon className="size-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="left">Add to queue</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                  {selectedBook && (
+                    <span className="rounded-sm bg-muted/40 px-1.5 py-0.5 text-[0.625rem] font-medium text-muted-foreground/60">
+                      {selectedBook.name} {chapter}
+                    </span>
                   )}
                 </div>
-              ))}
-            </div>
-          </div>
-        </>
+
+                {/* Result card — target verse prominent, neighbours secondary */}
+                <div className="overflow-hidden rounded-md border border-border">
+                  {focusedResultVerses.map((verse, i) => {
+                    const isTarget = verse.id === effectiveSelectedVerseId
+                    const isQueued = queuedVerseKeys.has(
+                      `${verse.book_number}:${verse.chapter}:${verse.verse}`
+                    )
+                    return (
+                      <div
+                        key={verse.id}
+                        id={`bb-verse-${verse.id}`}
+                        onClick={() => handleVerseClick(verse)}
+                        className={cn(
+                          "group relative flex cursor-pointer items-start gap-3 px-3 py-2.5 transition-colors",
+                          i < focusedResultVerses.length - 1 &&
+                            "border-b border-border/50",
+                          isTarget
+                            ? "border-l-2 border-l-lime-500 bg-lime-500/10"
+                            : "border-l-2 border-l-transparent opacity-60 hover:bg-muted/40 hover:opacity-100",
+                        )}
+                      >
+                        {/* Verse number */}
+                        <span
+                          className={cn(
+                            "mt-[0.1875rem] w-5 shrink-0 text-right font-mono text-[0.625rem] tabular-nums leading-relaxed",
+                            isTarget
+                              ? "font-semibold text-lime-500/90"
+                              : "text-muted-foreground/40",
+                          )}
+                        >
+                          {verse.verse}
+                        </span>
+
+                        {/* Verse text */}
+                        <p
+                          className={cn(
+                            "flex-1 leading-relaxed",
+                            isTarget
+                              ? "text-sm text-foreground"
+                              : "text-xs text-muted-foreground",
+                          )}
+                        >
+                          {verse.text}
+                        </p>
+
+                        {/* Queue indicator / add button */}
+                        {isQueued ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span
+                                  className="mt-[0.1875rem] flex size-5 shrink-0 cursor-pointer items-center justify-center"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    const store = useQueueStore.getState()
+                                    const idx = store.findDuplicate(
+                                      verse.book_number,
+                                      verse.chapter,
+                                      verse.verse,
+                                    )
+                                    if (idx !== -1) {
+                                      store.flashItem(store.items[idx].id)
+                                      document
+                                        .querySelector(
+                                          `[data-slot="service-queue"] [data-queue-idx="${idx}"]`,
+                                        )
+                                        ?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+                                    }
+                                  }}
+                                >
+                                  <CheckIcon className="size-3.5 text-ai-direct" />
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="left">Already in queue</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  className={cn(
+                                    "mt-[0.1875rem] shrink-0 opacity-0 transition-opacity group-hover:opacity-100",
+                                    isTarget
+                                      ? "hover:bg-lime-500/20 hover:text-lime-500"
+                                      : "bg-primary/40! text-primary-foreground hover:bg-primary!",
+                                  )}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    useQueueStore.getState().addItem(
+                                      verseToContentItem(verse, activeTranslationAbbrev, {
+                                        source: "manual",
+                                      }),
+                                    )
+                                  }}
+                                >
+                                  <PlusIcon className="size-3" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="left">Add to queue</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Compact hint: chapter context is in Verse Detail */}
+                <p className="mt-2 px-0.5 text-[0.5625rem] text-muted-foreground/35">
+                  Click to stage. Full chapter context appears in Verse Detail.
+                </p>
+              </div>
+            )}
+        </div>
       )}
 
       {/* TEXT SEARCH MODE — semantic / hybrid search results ────────────────── */}
@@ -647,7 +660,7 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
                     })
                   )
                 }}
-                className="group flex flex-col cursor-pointer gap-1 rounded-lg p-3 transition-colors hover:bg-muted/50 relative"
+                className="group flex flex-col cursor-pointer gap-1 rounded-sm p-3 transition-colors hover:bg-muted/50 relative"
               >
                 <div className="flex shrink-0 flex-row items-start gap-2">
                   <span className="text-xs font-semibold">
