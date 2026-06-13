@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import {
   BookOpenIcon,
   Music2Icon,
@@ -98,6 +98,7 @@ function SortableRow({
   return (
     <div
       ref={(el) => ref(el)}
+      data-queue-idx={index}
       className={cn(
         "group flex h-10 cursor-default select-none items-center gap-1.5 transition-all duration-100",
         isCurrentSection
@@ -163,6 +164,7 @@ function AddItemPopover() {
   const [query, setQuery] = useState("")
   const [searching, setSearching] = useState(false)
   const [results, setResults] = useState<Verse[]>([])
+  const searchRequestIdRef = useRef(0)
 
   const translations = useBibleStore((s) => s.translations)
   const activeTranslationId = useBibleStore((s) => s.activeTranslationId)
@@ -171,6 +173,7 @@ function AddItemPopover() {
 
   const handleSearch = useCallback(async (q: string) => {
     setQuery(q)
+    const requestId = ++searchRequestIdRef.current
     if (!q.trim()) {
       setResults([])
       return
@@ -178,9 +181,10 @@ function AddItemPopover() {
     setSearching(true)
     try {
       const verses = await bibleActions.searchVerses(q.trim(), 15)
+      if (requestId !== searchRequestIdRef.current) return
       setResults(verses)
     } finally {
-      setSearching(false)
+      if (requestId === searchRequestIdRef.current) setSearching(false)
     }
   }, [])
 

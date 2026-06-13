@@ -78,13 +78,15 @@ function StageOutput() {
   // Guarded: getCurrentWebviewWindow() throws outside the Tauri runtime (e.g. a
   // plain browser preview). Degrade gracefully to the static layout there.
   useEffect(() => {
+    let unmounted = false
     let unlisten: (() => void) | undefined
     try {
       const win = getCurrentWebviewWindow()
       win
         .listen<StagePayload>("broadcast:stage-update", (e) => setPayload(e.payload))
         .then((fn) => {
-          unlisten = fn
+          if (unmounted) fn()
+          else unlisten = fn
         })
         .catch(() => {})
       void win.emitTo("main", "broadcast:stage-ready").catch(() => {})
@@ -92,6 +94,7 @@ function StageOutput() {
       // Not inside Tauri — render the static stage layout only.
     }
     return () => {
+      unmounted = true
       unlisten?.()
     }
   }, [])

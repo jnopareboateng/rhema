@@ -5,7 +5,8 @@
   "windows": [
     "main",
     "broadcast",
-    "broadcast-alt"
+    "broadcast-alt",
+    "stage"
   ],
   "permissions": [
     "core:default",

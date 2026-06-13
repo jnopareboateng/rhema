@@ -219,12 +219,14 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
     (e: React.KeyboardEvent) => {
       if (e.key === "ArrowLeft") {
         e.preventDefault()
+        e.stopPropagation()
         if (chapter > 1) {
           setChapter((c) => c - 1)
           setSelectedVerseId(null)
         }
       } else if (e.key === "ArrowRight") {
         e.preventDefault()
+        e.stopPropagation()
         setChapter((c) => c + 1)
         setSelectedVerseId(null)
       } else if (e.key === "ArrowDown") {
@@ -564,7 +566,7 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
                               const idx = store.findDuplicate(verse.book_number, verse.chapter, verse.verse)
                               if (idx !== -1) {
                                 store.flashItem(store.items[idx].id)
-                                document.querySelector(`[data-slot="queue-panel"] [data-queue-idx="${idx}"]`)
+                                document.querySelector(`[data-slot="service-queue"] [data-queue-idx="${idx}"]`)
                                   ?.scrollIntoView({ behavior: "smooth", block: "nearest" })
                               }
                             }}
@@ -670,7 +672,7 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
                             const dupeIdx = store.findDuplicate(result.book_number, result.chapter, result.verse)
                             if (dupeIdx !== -1) {
                               store.flashItem(store.items[dupeIdx].id)
-                              document.querySelector(`[data-slot="queue-panel"] [data-queue-idx="${dupeIdx}"]`)
+                              document.querySelector(`[data-slot="service-queue"] [data-queue-idx="${dupeIdx}"]`)
                                 ?.scrollIntoView({ behavior: "smooth", block: "nearest" })
                             }
                           }}

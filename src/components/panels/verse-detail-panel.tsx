@@ -84,6 +84,7 @@ export function VerseDetailPanel({ stagedItem, setStagedItem }: VerseDetailPanel
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (shouldIgnoreGlobalKey(e)) return
+      if ((document.activeElement as HTMLElement | null)?.closest?.('[data-slot="content-browser"]')) return
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return
 
       const item = stagedItemRef.current

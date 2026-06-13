@@ -313,7 +313,7 @@ useQueueStore.subscribe(() => {
 // Push an initial stage frame when the stage window announces itself.
 // Guard: skip in non-browser (test/SSR) environments where window is not defined.
 if (typeof window !== "undefined") {
-  void listen("broadcast:stage-ready", () => syncStageOutput(useBroadcastStore.getState()))
+  void listen("broadcast:stage-ready", () => syncStageOutput(useBroadcastStore.getState())).catch(() => {})
 }
 
 // ── Theme persistence via tauri-plugin-store ──

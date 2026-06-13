@@ -91,7 +91,7 @@ function getVerse(args: Args): unknown {
 function searchVerses(args: Args): unknown {
   const query = args.query as string
   const translationId = args.translationId as number
-  const limit = (args.limit as number) ?? 20
+  const limit = Math.min(Number(args.limit) || 20, 200)
   try {
     return db
       .query(
@@ -123,7 +123,7 @@ function searchVerses(args: Args): unknown {
  */
 function semanticSearch(args: Args): unknown {
   const query = args.query as string
-  const limit = (args.limit as number | undefined) ?? 10
+  const limit = Math.min(Number(args.limit) || 10, 200)
   const fetchLimit = limit * 4
 
   type FtsRow = {
@@ -231,6 +231,7 @@ const CORS_HEADERS = {
 
 Bun.serve({
   port: DEV_BRIDGE_PORT,
+  hostname: "127.0.0.1",
   async fetch(req) {
     if (req.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS })

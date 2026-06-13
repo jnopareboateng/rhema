@@ -14,6 +14,7 @@ export interface FitSize {
 
 /** Compute display size (CSS px) for a fixed-aspect canvas inside a container. */
 export function computeFitSize({ containerWidth, containerHeight, aspect, mode }: FitInput): FitSize {
+  if (!(aspect > 0)) return { width: 0, height: 0 }
   if (mode === "width" || containerHeight <= 0) {
     return { width: containerWidth, height: containerWidth / aspect }
   }

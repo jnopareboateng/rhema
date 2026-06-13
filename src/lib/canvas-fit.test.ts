@@ -18,4 +18,8 @@ describe("computeFitSize", () => {
     expect(width).toBeCloseTo(400, 0)
     expect(height).toBeCloseTo(400 / aspect, 0)
   })
+  it("returns {0,0} for aspect=0 (degenerate guard)", () => {
+    const result = computeFitSize({ containerWidth: 400, containerHeight: 200, aspect: 0, mode: "contain" })
+    expect(result).toEqual({ width: 0, height: 0 })
+  })
 })
