@@ -1,80 +1,77 @@
-import { TransportBar } from "@/components/controls/transport-bar"
-import { TranscriptPanel } from "@/components/panels/transcript-panel"
-import { PreviewPanel } from "@/components/panels/preview-panel"
-import { LiveOutputPanel } from "@/components/panels/live-output-panel"
-import { QueuePanel } from "@/components/panels/queue-panel"
-import { SearchPanel } from "@/components/panels/search-panel"
-import { DetectionsPanel } from "@/components/panels/detections-panel"
+import { useState } from "react"
+import type { ContentItem } from "@/types/content"
+import { TopBar } from "@/components/shell/top-bar"
+import { ServiceQueue } from "@/components/shell/service-queue"
+import { PreviewStagingPanel } from "@/components/panels/preview-staging-panel"
+import { LiveOutput } from "@/components/panels/live-output"
+import { ContentBrowser } from "@/components/browser/content-browser"
+import { VerseDetailPanel } from "@/components/panels/verse-detail-panel"
 
+/**
+ * Dashboard — Rhema presentation shell.
+ *
+ * Grid (1440×900 target, min 1280×800):
+ *   Row 1: TopBar (56px, full width)
+ *   Row 2: ServiceQueue (280px fixed) | [PreviewStaging / LiveOutput] over [ContentBrowser / VerseDetail]
+ *
+ * Staged-item state is owned here and threaded to all four content panels (R4).
+ * Old AI-era panels (TransportBar, TranscriptPanel, DetectionsPanel, SearchPanel,
+ * PreviewPanel, LiveOutputPanel, QueuePanel) are no longer mounted.
+ */
 export function Dashboard() {
+  const [stagedItem, setStagedItem] = useState<ContentItem | null>(null)
+
   return (
     <div
       style={{
         position: "fixed",
         inset: "0px",
         display: "grid",
-        gridTemplateRows: "56px minmax(0, 2fr) minmax(0, 3fr)",
+        // Col 1: Service Queue (fixed). Col 2: right content area (fills remaining).
+        gridTemplateColumns: "280px minmax(0, 1fr)",
+        // Row 1: Top Bar. Row 2: main content (fills remaining height).
+        gridTemplateRows: "56px minmax(0, 1fr)",
         overflow: "hidden",
       }}
       className="bg-background"
     >
-      {/* Row 1: Transport Bar */}
-      <div className="col-span-4">
-        <TransportBar />
+      {/* ── Row 1: Top Bar (spans both columns) ─────────────────────────────── */}
+      <div style={{ gridColumn: "1 / -1" }}>
+        <TopBar />
       </div>
 
-      {/* Row 2: 4 panels */}
+      {/* ── Row 2, Col 1: Service Queue ──────────────────────────────────────── */}
       <div
-        className="col-span-4 min-h-0 *:min-h-0"
+        className="min-h-0 overflow-hidden"
+        style={{ padding: "8px 4px 8px 8px" }}
+      >
+        <ServiceQueue onPresent={setStagedItem} />
+      </div>
+
+      {/* ── Row 2, Col 2: Four content panels in a 2×2 sub-grid ─────────────── */}
+      {/*   Top row:    PreviewStaging (55%) | LiveOutput (45%)                  */}
+      {/*   Bottom row: ContentBrowser (55%) | VerseDetail (45%)                 */}
+      <div
+        className="min-h-0 overflow-hidden"
         style={{
-          padding: "12px",
           display: "grid",
-          gap: "12px",
-          minHeight: 0,
-          overflow: "hidden",
-          gridTemplateColumns: "320px minmax(0, 1fr) minmax(0, 1fr) 320px",
-          gridTemplateRows: "minmax(0, 1fr)",
+          gridTemplateColumns: "55fr 45fr",
+          gridTemplateRows: "240px minmax(0, 1fr)",
+          gap: "8px",
+          padding: "8px 8px 8px 4px",
         }}
       >
-        <TranscriptPanel />
-        <PreviewPanel />
-        <LiveOutputPanel />
-        <QueuePanel />
-      </div>
-      {/* Row 3: Search + Detections (own grid, independent of top row columns) */}
-      <div className="col-span-4 grid min-h-0 grid-cols-[2fr_1fr] gap-3 px-3 pb-3">
-        <SearchPanel />
-        <DetectionsPanel />
+        <PreviewStagingPanel
+          stagedItem={stagedItem}
+          setStagedItem={setStagedItem}
+        />
+        <LiveOutput />
+        <ContentBrowser setStagedItem={setStagedItem} />
+        <VerseDetailPanel
+          stagedItem={stagedItem}
+          setStagedItem={setStagedItem}
+        />
       </div>
     </div>
-    // <div
-    //   style={{
-    //     position: "fixed",
-    //     inset: "6px",
-    //     display: "grid",
-    //     gridTemplateColumns: "320px 1fr 1fr 340px",
-    //     gridTemplateRows: "64px 2fr 3fr",
-    //     gap: "6px",
-    //     overflow: "hidden",
-    //   }}
-    //   className="bg-background"
-    // >
-    //   {/* Row 1: Transport Bar */}
-    //   <div className="col-span-4">
-    //     <TransportBar />
-    //   </div>
-
-    //   {/* Row 2: 4 panels */}
-    //   <TranscriptPanel />
-    //   <PreviewPanel />
-    //   <LiveOutputPanel />
-    //   <QueuePanel />
-
-    //   {/* Row 3: Search + Detections (own grid, independent of top row columns) */}
-    //   <div className="col-span-4 grid min-h-0 grid-cols-[2fr_1fr] gap-[6px]">
-    //     <SearchPanel />
-    //     <DetectionsPanel />
-    //   </div>
-    // </div>
   )
 }
