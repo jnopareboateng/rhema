@@ -73,7 +73,6 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
   const [quickVersesList, setQuickVersesList] = useState<Verse[]>([])
 
   const quickInputRef = useRef<HTMLInputElement>(null)
-  const panelRef = useRef<HTMLDivElement>(null)
 
   const {
     translations,
@@ -201,7 +200,6 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
           setSelectedVerseId(target.id)
           bibleActions.selectVerse(target)
         }
-        panelRef.current?.focus()
       }).catch(console.error).finally(() => {
         useBibleStore.getState().setPendingNavigation(null)
       })
@@ -289,14 +287,6 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
         chapter: result.chapter,
         verse: result.verse,
       })
-
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (quickInputRef.current && document.activeElement !== quickInputRef.current) {
-            quickInputRef.current.focus()
-          }
-        })
-      })
     }
 
     if ((result.stage === "chapter" || result.stage === "verse") && result.matchedBook && result.chapter) {
@@ -376,10 +366,8 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
   return (
     <TooltipProvider>
     <div
-      ref={panelRef}
       data-slot="bible-browser"
-      className="flex min-h-0 flex-1 flex-col overflow-hidden outline-none"
-      tabIndex={-1}
+      className="flex min-h-0 flex-1 flex-col overflow-hidden"
     >
       {/* STICKY: Single unified search row */}
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-1.5 min-h-11">
