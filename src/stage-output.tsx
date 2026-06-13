@@ -74,15 +74,25 @@ function StageOutput() {
   const [payload, setPayload] = useState<StagePayload | null>(null)
   const [time, setTime] = useState(() => formatTime(new Date()))
 
-  // Stage-update listener + initial handshake
+  // Stage-update listener + initial handshake.
+  // Guarded: getCurrentWebviewWindow() throws outside the Tauri runtime (e.g. a
+  // plain browser preview). Degrade gracefully to the static layout there.
   useEffect(() => {
-    const win = getCurrentWebviewWindow()
-    const unlistenPromise = win.listen<StagePayload>("broadcast:stage-update", (e) => {
-      setPayload(e.payload)
-    })
-    void win.emitTo("main", "broadcast:stage-ready").catch(() => {})
+    let unlisten: (() => void) | undefined
+    try {
+      const win = getCurrentWebviewWindow()
+      win
+        .listen<StagePayload>("broadcast:stage-update", (e) => setPayload(e.payload))
+        .then((fn) => {
+          unlisten = fn
+        })
+        .catch(() => {})
+      void win.emitTo("main", "broadcast:stage-ready").catch(() => {})
+    } catch {
+      // Not inside Tauri — render the static stage layout only.
+    }
     return () => {
-      unlistenPromise.then((fn) => fn())
+      unlisten?.()
     }
   }, [])
 
