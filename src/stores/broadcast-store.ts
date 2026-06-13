@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import { emitTo } from "@tauri-apps/api/event"
+import { emitTo, listen } from "@tauri-apps/api/event"
 import { load, type Store } from "@tauri-apps/plugin-store"
 import type { BroadcastTheme, ContentItem, Slide } from "@/types"
 import { BUILTIN_THEMES } from "@/lib/builtin-themes"
@@ -309,6 +309,12 @@ useQueueStore.subscribe(() => {
   const s = useBroadcastStore.getState()
   if (s.isLive) syncStageOutput(s)
 })
+
+// Push an initial stage frame when the stage window announces itself.
+// Guard: skip in non-browser (test/SSR) environments where window is not defined.
+if (typeof window !== "undefined") {
+  void listen("broadcast:stage-ready", () => syncStageOutput(useBroadcastStore.getState()))
+}
 
 // ── Theme persistence via tauri-plugin-store ──
 

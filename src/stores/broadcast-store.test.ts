@@ -7,6 +7,9 @@ const mockEmitTo = vi.fn().mockResolvedValue(undefined)
 
 vi.mock("@tauri-apps/api/event", () => ({
   emitTo: (...args: unknown[]) => mockEmitTo(...args),
+  // listen is called at module-init time; resolve with a no-op unlisten fn.
+  // Defined inline to avoid the vi.mock hoisting TDZ issue.
+  listen: vi.fn().mockResolvedValue(() => {}),
 }))
 
 const verse: Verse = { id: 0, translation_id: 1, book_number: 1, book_name: "Genesis",
