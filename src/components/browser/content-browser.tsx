@@ -18,6 +18,8 @@ import {
 interface ContentBrowserProps {
   /** Called when the user selects a result. Stages the item in Preview/Staging. */
   setStagedItem: (i: ContentItem | null) => void
+  /** Called when the active tab changes, so the detail panel can mirror it. */
+  onTabChange?: (tab: string) => void
 }
 
 function EmptyState({ icon, message }: { icon: React.ReactNode; message: string }) {
@@ -33,16 +35,17 @@ function EmptyState({ icon, message }: { icon: React.ReactNode; message: string 
   )
 }
 
-export function ContentBrowser({ setStagedItem }: ContentBrowserProps) {
+export function ContentBrowser({ setStagedItem, onTabChange }: ContentBrowserProps) {
   return (
     <div
       data-slot="content-browser"
       className={cn(
-        "flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card",
+        "flex min-h-0 flex-col overflow-hidden rounded-md border border-border bg-card",
       )}
     >
       <Tabs
         defaultValue="bible"
+        onValueChange={onTabChange}
         className="flex min-h-0 flex-1 flex-col overflow-hidden"
       >
         {/* Tab bar */}

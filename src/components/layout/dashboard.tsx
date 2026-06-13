@@ -6,7 +6,7 @@ import { ServiceQueue } from "@/components/shell/service-queue"
 import { PreviewStagingPanel } from "@/components/panels/preview-staging-panel"
 import { LiveOutput } from "@/components/panels/live-output"
 import { ContentBrowser } from "@/components/browser/content-browser"
-import { VerseDetailPanel } from "@/components/panels/verse-detail-panel"
+import { TabDetail } from "@/components/panels/tab-detail"
 
 const TOP_RATIO_KEY = "rhema.shell.topRatio"
 const QUEUE_COLLAPSED_KEY = "rhema.shell.queueCollapsed"
@@ -57,9 +57,12 @@ function readStoredCollapsed(): boolean {
  */
 export function Dashboard() {
   const [stagedItem, setStagedItem] = useState<ContentItem | null>(null)
-  // R1: below 1280px the dense 2×2 right grid would clip; reflow to a single
-  // scrollable column (Verse Detail drops under the Content Browser).
+  // The 2×2 split is the intended layout for this desktop app (min window
+  // 1280×800). Only reflow to a single scrollable column at very small widths
+  // (<768) as a safety net — normal/large screens always keep the split.
   const [narrow, setNarrow] = useState(false)
+  // Active Content Browser tab — drives the contextual detail panel (bottom-right).
+  const [browserTab, setBrowserTab] = useState("bible")
   // topRatio: fraction of the right-area inner height assigned to the top row.
   // Range: 0.25–0.75. Default: 0.5. Persisted to localStorage.
   // Lazy initialiser reads localStorage once at mount.
@@ -71,7 +74,7 @@ export function Dashboard() {
   const contentAreaRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const onResize = () => setNarrow(window.innerWidth < 1280)
+    const onResize = () => setNarrow(window.innerWidth < 768)
     onResize()
     window.addEventListener("resize", onResize)
     return () => window.removeEventListener("resize", onResize)
@@ -232,8 +235,9 @@ export function Dashboard() {
             marginTop: narrow ? "4px" : 0,
           }}
         >
-          <ContentBrowser setStagedItem={setStagedItem} />
-          <VerseDetailPanel
+          <ContentBrowser setStagedItem={setStagedItem} onTabChange={setBrowserTab} />
+          <TabDetail
+            tab={browserTab}
             stagedItem={stagedItem}
             setStagedItem={setStagedItem}
           />
