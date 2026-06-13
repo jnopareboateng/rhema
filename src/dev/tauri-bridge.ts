@@ -13,10 +13,17 @@
  * In production builds Vite replaces import.meta.env.DEV with `false`,
  * dead-code-eliminates the dynamic import of this file, and it is never
  * included in the bundle.
+ *
+ * Auth: every request carries `Authorization: Bearer <token>` where the token
+ * comes from VITE_DEV_BRIDGE_TOKEN in .env.local. The bridge server validates
+ * it. Set the same value in DEV_BRIDGE_TOKEN when starting the bridge.
  */
 import { mockIPC } from "@tauri-apps/api/mocks"
 
-const BRIDGE_URL = "http://localhost:8765/invoke"
+// Use the page hostname so the bridge is reachable from any network device
+// that can reach this Vite server (e.g. Windows browser hitting the WSL IP).
+const BRIDGE_URL = `http://${window.location.hostname}:8765/invoke`
+const BRIDGE_TOKEN: string = import.meta.env.VITE_DEV_BRIDGE_TOKEN ?? ""
 
 const BIBLE_COMMANDS = new Set([
   "list_translations",
@@ -35,7 +42,10 @@ export function installDevTauriBridge(): void {
     if (BIBLE_COMMANDS.has(cmd)) {
       const res = await fetch(BRIDGE_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(BRIDGE_TOKEN ? { Authorization: `Bearer ${BRIDGE_TOKEN}` } : {}),
+        },
         body: JSON.stringify({ cmd, args: payload ?? {} }),
       })
       if (!res.ok) {

@@ -14,6 +14,22 @@ import { Database } from "bun:sqlite"
 /** Port shared with the browser-side shim (src/dev/tauri-bridge.ts). */
 export const DEV_BRIDGE_PORT = 8765
 
+// ── Auth token ────────────────────────────────────────────────────────────────
+// Read from DEV_BRIDGE_TOKEN env var. If not set, generate a random one and
+// print it so the caller can copy it into VITE_DEV_BRIDGE_TOKEN in .env.local.
+function getOrGenToken(): string {
+  const t = process.env.DEV_BRIDGE_TOKEN
+  if (t && t.length >= 8) return t
+  const generated = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+  console.warn("\n[bridge] ⚠  No DEV_BRIDGE_TOKEN set — using generated token for this session.")
+  console.warn(`[bridge]    Set in .env.local:  VITE_DEV_BRIDGE_TOKEN=${generated}`)
+  console.warn(`[bridge]    Start bridge with:  DEV_BRIDGE_TOKEN=${generated} bun scripts/dev-bible-bridge.ts\n`)
+  return generated
+}
+const TOKEN = getOrGenToken()
+
 const DB_PATH = new URL("../data/rhema.db", import.meta.url).pathname
 const db = new Database(DB_PATH, { readonly: true })
 
@@ -226,15 +242,24 @@ function dispatch(cmd: string, args: Args): unknown {
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 }
 
 Bun.serve({
   port: DEV_BRIDGE_PORT,
-  hostname: "127.0.0.1",
+  hostname: "0.0.0.0",
   async fetch(req) {
     if (req.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS })
+    }
+
+    // Validate bearer token on all non-preflight requests
+    const auth = req.headers.get("Authorization") ?? ""
+    if (auth !== `Bearer ${TOKEN}`) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+      })
     }
 
     const url = new URL(req.url)
@@ -270,4 +295,4 @@ Bun.serve({
   },
 })
 
-console.log(`[bridge] Listening on http://localhost:${DEV_BRIDGE_PORT}`)
+console.log(`[bridge] Listening on http://0.0.0.0:${DEV_BRIDGE_PORT}`)

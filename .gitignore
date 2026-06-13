@@ -65,3 +65,4 @@ screenshot*.mjs
 # Local QA journey helpers
 journey*.mjs
 qa-shots/
+.env.local
