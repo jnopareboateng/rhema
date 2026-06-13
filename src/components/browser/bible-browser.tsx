@@ -34,6 +34,8 @@ import { searchContextWithFuse } from "@/lib/context-search"
 interface BibleBrowserProps {
   /** Called when user clicks a verse row — stages it in Preview/Staging. */
   onStage: (item: ContentItem) => void
+  /** Whether this browser is the active/visible tab. Defaults to true. */
+  isActive?: boolean
 }
 
 /** Highlights words from the query that appear in the text. */
@@ -63,7 +65,7 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
   )
 }
 
-export function BibleBrowser({ onStage }: BibleBrowserProps) {
+export function BibleBrowser({ onStage, isActive }: BibleBrowserProps) {
   /** Single input drives both reference navigation and free-text search. */
   const [unifiedQuery, setUnifiedQuery] = useState("")
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
@@ -73,6 +75,11 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
   const [quickVersesList, setQuickVersesList] = useState<Verse[]>([])
 
   const quickInputRef = useRef<HTMLInputElement>(null)
+
+  // Focus the search input on mount and whenever this tab becomes active
+  useEffect(() => {
+    if (isActive !== false) quickInputRef.current?.focus()
+  }, [isActive])
 
   const {
     translations,
@@ -387,6 +394,7 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
           )}
           <Input
             ref={quickInputRef}
+            autoFocus
             value={unifiedQuery}
             onChange={(e) => handleUnifiedQueryChange(e.target.value)}
             onKeyDown={handleQuickKeyDown}

@@ -36,6 +36,8 @@ function EmptyState({ icon, message }: { icon: React.ReactNode; message: string 
 }
 
 export function ContentBrowser({ setStagedItem, onTabChange }: ContentBrowserProps) {
+  const [activeTab, setActiveTab] = React.useState("bible")
+
   return (
     <div
       data-slot="content-browser"
@@ -45,7 +47,10 @@ export function ContentBrowser({ setStagedItem, onTabChange }: ContentBrowserPro
     >
       <Tabs
         defaultValue="bible"
-        onValueChange={onTabChange}
+        onValueChange={(tab) => {
+          setActiveTab(tab)
+          onTabChange?.(tab)
+        }}
         className="flex min-h-0 flex-1 flex-col overflow-hidden"
       >
         {/* Tab bar */}
@@ -78,7 +83,7 @@ export function ContentBrowser({ setStagedItem, onTabChange }: ContentBrowserPro
           value="bible"
           className="min-h-0 flex-1 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col"
         >
-          <BibleBrowser onStage={setStagedItem} />
+          <BibleBrowser onStage={setStagedItem} isActive={activeTab === "bible"} />
         </TabsContent>
 
         {/* Songs tab — placeholder */}
