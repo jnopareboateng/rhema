@@ -75,7 +75,14 @@ const TRANSLATIONS_META: Array<{
   { file: "NASB.json", abbreviation: "NASB", title: "New American Standard Bible", language: "en", license: "Lockman Foundation" },
   { file: "NKJV.json", abbreviation: "NKJV", title: "New King James Version", language: "en", license: "Thomas Nelson" },
   { file: "NLT.json", abbreviation: "NLT", title: "New Living Translation", language: "en", license: "Tyndale House" },
-  { file: "AMP.json", abbreviation: "AMP", title: "Amplified Bible", language: "en", license: "Lockman Foundation" },
+  { file: "AMP.json",  abbreviation: "AMP",  title: "Amplified Bible",                    language: "en", license: "Lockman Foundation" },
+  { file: "GNT.json",  abbreviation: "GNT",  title: "Good News Translation",             language: "en", license: "American Bible Society" },
+  { file: "AMPC.json", abbreviation: "AMPC", title: "Amplified Bible, Classic Edition",  language: "en", license: "Lockman Foundation" },
+  { file: "TPT.json",  abbreviation: "TPT",  title: "The Passion Translation",           language: "en", license: "BroadStreet Publishing" },
+  // MSG and CEV are commercially licensed; no legitimately-free open dataset found.
+  // Drop a licensed MSG.json / CEV.json into data/sources/ and uncomment to ingest on rebuild.
+  // { file: "MSG.json",  abbreviation: "MSG",  title: "The Message",                      language: "en", license: "NavPress" },
+  // { file: "CEV.json",  abbreviation: "CEV",  title: "Contemporary English Version",     language: "en", license: "American Bible Society" },
   // Non-English
   { file: "SpaRV.json", abbreviation: "SpaRV", title: "Reina-Valera 1909", language: "es", license: "Public Domain" },
   { file: "FreJND.json", abbreviation: "FreJND", title: "J.N. Darby French 1885", language: "fr", license: "Public Domain" },
