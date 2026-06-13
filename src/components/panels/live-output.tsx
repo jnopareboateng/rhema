@@ -23,7 +23,7 @@ export function LiveOutput() {
     <div
       data-slot="live-output"
       className={cn(
-        "flex min-h-0 flex-col overflow-hidden rounded-lg bg-card",
+        "flex min-h-0 flex-col overflow-hidden rounded-md bg-card",
         isLive
           ? "border border-emerald-500/30 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.06)]"
           : "border border-border",
@@ -87,10 +87,11 @@ export function LiveOutput() {
           !isLive && "opacity-40",
         )}
       >
-        {/* Live-state framing ring: green when on-air, red tint when off-air */}
+        {/* Live-state framing ring: green when on-air, red tint when off-air.
+            No inner rounding — panel container is already rounded-md. */}
         <div
           className={cn(
-            "pointer-events-none absolute inset-2 rounded-md ring-1 transition-colors duration-300",
+            "pointer-events-none absolute inset-2 ring-1 transition-colors duration-300",
             isLive ? "ring-emerald-500/20" : "ring-red-500/10",
           )}
         />

@@ -4,11 +4,26 @@ import { useBroadcastStore } from "@/stores"
 import { SettingsDialog } from "@/components/settings-dialog"
 import { ThemeDesigner } from "@/components/broadcast/theme-designer"
 import { BroadcastSettings } from "@/components/broadcast/broadcast-settings"
-import { UserIcon, MonitorIcon, TvIcon, PaletteIcon, CastIcon } from "lucide-react"
+import {
+  UserIcon,
+  MonitorIcon,
+  TvIcon,
+  PaletteIcon,
+  CastIcon,
+  PanelLeftCloseIcon,
+  PanelLeftOpenIcon,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-export function TopBar() {
+interface TopBarProps {
+  /** Whether the service queue column is currently collapsed. */
+  queueCollapsed?: boolean
+  /** Called to toggle the queue column open/closed. */
+  onToggleQueue?: () => void
+}
+
+export function TopBar({ queueCollapsed = false, onToggleQueue }: TopBarProps) {
   const isLive = useBroadcastStore((s) => s.isLive)
   const [serviceName, setServiceName] = useState("Sunday Service")
   const [isEditingName, setIsEditingName] = useState(false)
@@ -72,6 +87,27 @@ export function TopBar() {
       </div>
 
       <div className="h-5 w-px bg-border shrink-0" />
+
+      {/* Queue toggle — compact icon button near wordmark; restores the 280px column */}
+      {onToggleQueue && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          title={queueCollapsed ? "Show service queue" : "Hide service queue"}
+          aria-label={queueCollapsed ? "Show service queue" : "Hide service queue"}
+          onClick={onToggleQueue}
+          className={cn(
+            "shrink-0",
+            queueCollapsed && "text-primary bg-primary/8 hover:bg-primary/15",
+          )}
+        >
+          {queueCollapsed ? (
+            <PanelLeftOpenIcon className="size-3.5" />
+          ) : (
+            <PanelLeftCloseIcon className="size-3.5" />
+          )}
+        </Button>
+      )}
 
       {/* Zone: Center-left — Service name + live clock */}
       <div className="flex flex-col gap-0.5 shrink-0">

@@ -11,6 +11,7 @@ import {
   Loader2Icon,
   GalleryVerticalEndIcon,
   InfoIcon,
+  PanelLeftCloseIcon,
 } from "lucide-react"
 import type { ContentItem } from "@/types/content"
 import type { Verse } from "@/types"
@@ -322,9 +323,11 @@ function OverflowMenu() {
 interface ServiceQueueProps {
   /** Called when a queue item's play button is clicked. */
   onPresent: (item: ContentItem) => void
+  /** Called to collapse the queue column back into the dashboard. */
+  onCollapse?: () => void
 }
 
-export function ServiceQueue({ onPresent }: ServiceQueueProps) {
+export function ServiceQueue({ onPresent, onCollapse }: ServiceQueueProps) {
   const items = useQueueStore((s) => s.items)
   const activeIndex = useQueueStore((s) => s.activeIndex)
 
@@ -396,7 +399,7 @@ export function ServiceQueue({ onPresent }: ServiceQueueProps) {
     <div
       data-slot="service-queue"
       className={cn(
-        "flex min-h-0 h-full flex-col overflow-hidden rounded-lg",
+        "flex min-h-0 h-full flex-col overflow-hidden rounded-md",
         "border border-border/60 bg-card",
         "shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04),0_1px_4px_0_rgba(0,0,0,0.25)]",
       )}
@@ -405,6 +408,17 @@ export function ServiceQueue({ onPresent }: ServiceQueueProps) {
       <PanelHeader title="Service Queue">
         <AddItemPopover />
         <OverflowMenu />
+        {onCollapse && (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={onCollapse}
+            title="Collapse queue"
+            aria-label="Collapse queue"
+          >
+            <PanelLeftCloseIcon className="size-3" />
+          </Button>
+        )}
       </PanelHeader>
 
       {/* ── Scrollable item list ───────────────────────────────────────────── */}

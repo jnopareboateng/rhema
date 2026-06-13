@@ -33,7 +33,7 @@ export function PreviewStagingPanel({ stagedItem, setStagedItem }: PreviewStagin
     <div
       data-slot="preview-staging-panel"
       className={cn(
-        "flex min-h-0 flex-col overflow-hidden rounded-lg bg-card",
+        "flex min-h-0 flex-col overflow-hidden rounded-md bg-card",
         "border border-blue-500/20",
         "shadow-[inset_0_0_0_1px_rgba(59,130,246,0.05)]",
       )}
@@ -49,9 +49,9 @@ export function PreviewStagingPanel({ stagedItem, setStagedItem }: PreviewStagin
       {/* Blue accent line — visual separator that marks this as preview, not live */}
       <div className="h-px bg-gradient-to-r from-blue-500/40 via-blue-400/10 to-transparent" />
 
-      {/* Canvas area with blue framing ring */}
+      {/* Canvas area — inner ring uses no rounding (panel is already rounded-md) */}
       <div className="relative flex min-h-0 flex-1 items-center justify-center p-2">
-        <div className="pointer-events-none absolute inset-2 rounded-md ring-1 ring-blue-500/12" />
+        <div className="pointer-events-none absolute inset-2 ring-1 ring-blue-500/12" />
         <CanvasVerse theme={activeTheme} verse={stagedSlide} fit="contain" />
       </div>
 
