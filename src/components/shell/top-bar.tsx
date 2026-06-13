@@ -205,6 +205,8 @@ export function TopBar({ queueCollapsed = false, onToggleQueue }: TopBarProps) {
         {/* ThemeDesigner portal — preserved from TransportBar */}
         <ThemeDesigner />
 
+        <div className="h-5 w-px bg-border/60 mx-0.5 shrink-0" />
+
         {/* SettingsDialog — preserved from TransportBar */}
         <SettingsDialog />
 
