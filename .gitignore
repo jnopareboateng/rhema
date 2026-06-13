@@ -61,3 +61,7 @@ data/rhema.db-wal
 
 # Local Playwright QA helpers (machine-specific paths)
 screenshot*.mjs
+
+# Local QA journey helpers
+journey*.mjs
+qa-shots/
