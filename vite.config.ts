@@ -1,7 +1,7 @@
 import path from "path"
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import { defineConfig, configDefaults } from "vitest/config"
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -24,5 +24,9 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  test: {
+    // Never scan ephemeral worktree copies under .claude/worktrees.
+    exclude: [...configDefaults.exclude, "**/.claude/**"],
   },
 })
