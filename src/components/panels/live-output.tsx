@@ -25,7 +25,7 @@ export function LiveOutput() {
       className={cn(
         "flex min-h-0 flex-col overflow-hidden rounded-md bg-card",
         isLive
-          ? "border border-emerald-500/30 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.06)]"
+          ? "border border-emerald-500/60 shadow-[0_0_0_1px_rgba(16,185,129,0.15),inset_0_0_0_1px_rgba(16,185,129,0.06)]"
           : "border border-border",
       )}
     >
@@ -92,7 +92,7 @@ export function LiveOutput() {
         <div
           className={cn(
             "pointer-events-none absolute inset-2 ring-1 transition-colors duration-300",
-            isLive ? "ring-emerald-500/20" : "ring-red-500/10",
+            isLive ? "ring-emerald-500/30" : "ring-white/5",
           )}
         />
 
