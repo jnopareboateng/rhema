@@ -405,14 +405,12 @@ export function ServiceQueue({ onPresent, onCollapse }: ServiceQueueProps) {
           <div className="flex flex-col pb-1 pt-0.5">
             {/* Empty state */}
             {isEmpty && (
-              <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+              <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
                 <GalleryVerticalEndIcon className="size-5 text-muted-foreground/20" />
                 <p className="text-[0.6875rem] font-medium text-muted-foreground/40">
                   Queue is empty
                 </p>
-                <p className="text-[0.5625rem] text-muted-foreground/30">
-                  Use + Add Item to get started
-                </p>
+                <AddItemPopover />
               </div>
             )}
 
@@ -481,12 +479,14 @@ export function ServiceQueue({ onPresent, onCollapse }: ServiceQueueProps) {
       </ScrollArea>
 
       {/* ── Footer hint ───────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-1.5 border-t border-border/40 px-3 py-2">
-        <InfoIcon className="size-2.5 shrink-0 text-muted-foreground/25" />
-        <p className="text-[0.5rem] text-muted-foreground/35">
-          Drag items to reorder
-        </p>
-      </div>
+      {!isEmpty && (
+        <div className="flex items-center gap-1.5 border-t border-border/40 px-3 py-2">
+          <InfoIcon className="size-2.5 shrink-0 text-muted-foreground/25" />
+          <p className="text-[0.5rem] text-muted-foreground/35">
+            Drag items to reorder
+          </p>
+        </div>
+      )}
     </div>
   )
 }
