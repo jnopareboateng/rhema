@@ -933,7 +933,7 @@ export function SettingsDialog() {
         <DialogDescription className="sr-only">
           Configure audio, display mode, and API keys.
         </DialogDescription>
-        <SidebarProvider className="items-start">
+        <SidebarProvider className="items-start" style={{ minHeight: "unset" }}>
           <Sidebar collapsible="none" className="hidden md:flex">
             <div className="h-14 border-b border-border border-r px-4 flex items-center" >
               Settings
