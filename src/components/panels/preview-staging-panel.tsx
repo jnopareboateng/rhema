@@ -50,17 +50,8 @@ export function PreviewStagingPanel({ stagedItem }: PreviewStagingPanelProps) {
         <CanvasVerse theme={activeTheme} verse={stagedSlide} fit="contain" />
       </div>
 
-      {/* Action bar — 40px */}
-      <div className="flex h-10 shrink-0 items-center gap-1.5 border-t border-border/60 bg-card/80 px-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled
-          className="h-7 px-2.5 text-[0.6875rem] text-muted-foreground/35"
-        >
-          Edit
-        </Button>
-
+      {/* Action bar — 44px */}
+      <div className="flex h-11 shrink-0 items-center gap-1.5 border-t border-border/60 bg-card/80 px-2">
         <div className="flex-1" />
 
         <Button
@@ -79,7 +70,7 @@ export function PreviewStagingPanel({ stagedItem }: PreviewStagingPanelProps) {
         <Button
           size="sm"
           className={cn(
-            "h-7 px-3 text-[0.6875rem] font-semibold tracking-wide",
+            "h-8 px-4 text-sm font-semibold tracking-wide",
             "bg-blue-600 text-white hover:bg-blue-500",
             "border border-blue-500/40",
             "shadow-[0_0_0_1px_rgba(59,130,246,0.2),0_1px_4px_rgba(59,130,246,0.15)]",
