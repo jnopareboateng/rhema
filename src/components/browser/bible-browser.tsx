@@ -37,8 +37,6 @@ interface BibleBrowserProps {
   onStage: (item: ContentItem) => void
 }
 
-type SearchTab = "book" | "context"
-
 /** Highlights words from the query that appear in the text. */
 function HighlightedText({ text, query }: { text: string; query: string }) {
   if (!query || query.length < 2) return <>{text}</>
@@ -67,14 +65,12 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
 }
 
 export function BibleBrowser({ onStage }: BibleBrowserProps) {
-  const [activeTab, setActiveTab] = useState<SearchTab>("book")
+  /** Single input drives both reference navigation and free-text search. */
+  const [unifiedQuery, setUnifiedQuery] = useState("")
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [chapter, setChapter] = useState(1)
   const [selectedVerseId, setSelectedVerseId] = useState<number | null>(null)
-  const [contextQuery, setContextQuery] = useState("")
 
-  // EasyWorship-style autocomplete
-  const [quickInput, setQuickInput] = useState("")
   const [showQuickVerses, setShowQuickVerses] = useState(false)
   const [quickVersesList, setQuickVersesList] = useState<Verse[]>([])
 
@@ -107,7 +103,26 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
     [translations, activeTranslationId]
   )
 
-  // Load initial data and default to Genesis 1:1
+  // ── Routing heuristic ────────────────────────────────────────────────────────
+  // Derive autocomplete result during render (no setState cascading).
+  const autocompleteResult = useMemo(
+    () => getAutocompleteSuggestion(unifiedQuery, books),
+    [unifiedQuery, books]
+  )
+  const quickSuggestion = autocompleteResult.suggestion
+
+  /**
+   * "reference" when the query is empty (browse chapter) OR when it parses
+   * as a Bible book/chapter/verse reference (stage !== "none").
+   * "text" when the query has content that doesn't match any book reference —
+   * routes to semantic / Fuse full-text search.
+   */
+  const searchMode: "reference" | "text" =
+    unifiedQuery.length === 0 || autocompleteResult.stage !== "none"
+      ? "reference"
+      : "text"
+
+  // ── Initialisation ───────────────────────────────────────────────────────────
   useEffect(() => {
     bibleActions.loadTranslations().catch(console.error)
     bibleActions.loadBooks().then(() => {
@@ -133,7 +148,7 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
     return currentChapter.find((v) => v.verse === selectedVerse.verse)?.id ?? null
   }, [currentChapter, selectedVerseId, selectedVerse])
 
-  // After chapter reloads (e.g., translation change), re-select by verse number
+  // After chapter reloads (e.g. translation change), re-select by verse number
   useEffect(() => {
     if (!selectedVerseId || !selectedVerse || currentChapter.length === 0) return
     const stillExists = currentChapter.some((v) => v.id === selectedVerseId)
@@ -147,7 +162,6 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
 
   const applyNavigationSelection = useCallback(
     (book: Book, navChapter: number) => {
-      setActiveTab("book")
       setSelectedBook(book)
       setChapter(navChapter)
     },
@@ -193,14 +207,14 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
     return unsubscribe
   }, [applyNavigationSelection])
 
-  // Verse row click: select verse + stage for preview
+  // ── Verse interaction ────────────────────────────────────────────────────────
   const handleVerseClick = useCallback((verse: Verse) => {
     setSelectedVerseId(verse.id)
     bibleActions.selectVerse(verse)
     onStage(verseToContentItem(verse, activeTranslationAbbrev, { source: "manual" }))
   }, [onStage, activeTranslationAbbrev])
 
-  // Arrow key chapter/verse navigation
+  // Arrow key chapter/verse navigation (reference mode only)
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "ArrowLeft") {
@@ -248,8 +262,7 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
     [chapter, currentChapter, effectiveSelectedVerseId]
   )
 
-  // Context search — hybrid backend (vector + FTS5 BM25) as primary,
-  // Fuse.js fallback when semantic model is not loaded.
+  // ── Text / semantic search ───────────────────────────────────────────────────
   const contextDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const contextSearchRequestIdRef = useRef(0)
 
@@ -273,27 +286,38 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
     useBibleStore.getState().setSemanticResults(fuseResults)
   }, [])
 
-  const handleContextSearch = useCallback((query: string) => {
-    setContextQuery(query)
+  /**
+   * Unified input handler:
+   * - Detects mode synchronously via getAutocompleteSuggestion.
+   * - Debounces text search; clears semantic results immediately on reference mode.
+   */
+  const handleUnifiedQueryChange = useCallback((query: string) => {
+    setUnifiedQuery(query)
     if (contextDebounceRef.current) clearTimeout(contextDebounceRef.current)
-    if (query.length >= 5) {
+
+    const result = getAutocompleteSuggestion(query, books)
+    const isTextMode = query.length > 0 && result.stage === "none"
+
+    if (isTextMode && query.length >= 5) {
       const translationId = useBibleStore.getState().activeTranslationId
       contextDebounceRef.current = setTimeout(() => {
         runContextSearch(query, translationId).catch(console.error)
       }, 280)
     } else {
+      // Switched to reference mode or query too short — discard stale results
       contextSearchRequestIdRef.current += 1
       useBibleStore.getState().setSemanticResults([])
     }
-  }, [runContextSearch])
+  }, [runContextSearch, books])
 
+  // Re-fire text search when translation changes while in text mode
   useEffect(() => {
-    if (activeTab !== "context" || contextQuery.length < 5) return
+    if (searchMode !== "text" || unifiedQuery.length < 5) return
     if (contextDebounceRef.current) clearTimeout(contextDebounceRef.current)
     contextDebounceRef.current = setTimeout(() => {
-      runContextSearch(contextQuery, activeTranslationId).catch(console.error)
+      runContextSearch(unifiedQuery, activeTranslationId).catch(console.error)
     }, 120)
-  }, [activeTranslationId, activeTab, contextQuery, runContextSearch])
+  }, [activeTranslationId, searchMode, unifiedQuery, runContextSearch])
 
   useEffect(() => {
     return () => {
@@ -301,14 +325,7 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
     }
   }, [])
 
-  // Derive autocomplete suggestion during render (no setState cascading)
-  const autocompleteResult = useMemo(
-    () => getAutocompleteSuggestion(quickInput, books),
-    [quickInput, books]
-  )
-  const quickSuggestion = autocompleteResult.suggestion
-
-  // Side effects only: navigation + verse loading
+  // ── Reference-mode side effects: navigation + quick verse list ───────────────
   useEffect(() => {
     const result = autocompleteResult
 
@@ -340,29 +357,31 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
     }
   }, [autocompleteResult, activeTranslationId])
 
-  const shouldShowVerseDropdown = showQuickVerses
-    && (autocompleteResult.stage === "chapter" || autocompleteResult.stage === "verse")
+  const shouldShowVerseDropdown =
+    searchMode === "reference" &&
+    showQuickVerses &&
+    (autocompleteResult.stage === "chapter" || autocompleteResult.stage === "verse")
 
   const handleQuickKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if ((e.key === "Tab" || e.key === "ArrowRight") && quickSuggestion && quickSuggestion !== quickInput) {
+    if ((e.key === "Tab" || e.key === "ArrowRight") && quickSuggestion && quickSuggestion !== unifiedQuery) {
       e.preventDefault()
-      const nextInput = getTabNavigationResult(quickInput, quickSuggestion)
-      setQuickInput(nextInput)
+      const nextInput = getTabNavigationResult(unifiedQuery, quickSuggestion)
+      setUnifiedQuery(nextInput)
       return
     }
     if (e.key === "Enter") {
       e.preventDefault()
-      setQuickInput("")
+      setUnifiedQuery("")
       setShowQuickVerses(false)
       return
     }
     if (e.key === "Escape") {
       e.preventDefault()
-      setQuickInput("")
+      setUnifiedQuery("")
       setShowQuickVerses(false)
       return
     }
-  }, [quickInput, quickSuggestion])
+  }, [unifiedQuery, quickSuggestion])
 
   const handleQuickVerseClick = useCallback((verse: Verse) => {
     useBibleStore.getState().setPendingNavigation({
@@ -370,10 +389,11 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
       chapter: verse.chapter,
       verse: verse.verse,
     })
-    setQuickInput("")
+    setUnifiedQuery("")
     setShowQuickVerses(false)
   }, [])
 
+  // ── Translation selector (shared between modes) ──────────────────────────────
   const translationSelector = (
     <Select
       value={String(activeTranslationId)}
@@ -398,114 +418,84 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
     </Select>
   )
 
+  // ── Subtle mode indicator icon (no toggle — just visual feedback) ─────────────
+  const modeIcon = searchMode === "reference"
+    ? <BookOpenIcon className="size-3.5 shrink-0 text-muted-foreground/50 transition-colors" />
+    : <SparklesIcon className="size-3.5 shrink-0 text-lime-400/80 transition-colors" />
+
   return (
     <div
       ref={panelRef}
       data-slot="bible-browser"
       className="flex min-h-0 flex-1 flex-col overflow-hidden outline-none"
-      onKeyDown={activeTab === "book" ? handleKeyDown : undefined}
+      onKeyDown={searchMode === "reference" ? handleKeyDown : undefined}
       tabIndex={-1}
     >
-      {/* STICKY: Tab row + search input */}
-      <div className="flex shrink-0 items-center gap-0 border-b border-border min-h-11">
-        <div className="flex items-center gap-1 px-3 py-1.5">
-          <button
-            onClick={() => setActiveTab("book")}
+      {/* STICKY: Single unified search row */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-1.5 min-h-11">
+        {modeIcon}
+
+        {/* Input with ghost-suggestion overlay (reference mode) */}
+        <div className="relative flex-1">
+          {searchMode === "reference" && quickSuggestion && quickSuggestion !== unifiedQuery && (
+            <div className="absolute inset-0 flex items-center px-3 pointer-events-none z-10">
+              <span className="text-xs font-normal">
+                <span className="text-foreground">{unifiedQuery}</span>
+                <span className="text-gray-500 dark:text-gray-400">
+                  {quickSuggestion.slice(unifiedQuery.length)}
+                </span>
+              </span>
+            </div>
+          )}
+          <Input
+            ref={quickInputRef}
+            value={unifiedQuery}
+            onChange={(e) => handleUnifiedQueryChange(e.target.value)}
+            onKeyDown={handleQuickKeyDown}
+            placeholder="Type a reference (Jn 3:16) or phrase…"
             className={cn(
-              "flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
-              activeTab === "book"
-                ? "border-lime-500/50 bg-lime-500/15"
-                : "border-border text-muted-foreground hover:text-foreground"
+              "h-7 text-xs bg-background",
+              searchMode === "reference" && quickSuggestion && quickSuggestion !== unifiedQuery
+                ? "text-transparent"
+                : ""
             )}
-          >
-            <BookOpenIcon className={cn("size-3.5", activeTab === "book" ? "text-lime-400" : "text-muted-foreground")} />
-            Book search
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab("context")
-              setContextQuery("")
-            }}
-            className={cn(
-              "flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
-              activeTab === "context"
-                ? "border-lime-500/50 bg-lime-500/15"
-                : "border-border bg-background text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <SparklesIcon className={cn("size-3.5", activeTab === "context" ? "text-lime-400" : "text-muted-foreground")} />
-            Context search
-          </button>
+            style={
+              searchMode === "reference" && quickSuggestion && quickSuggestion !== unifiedQuery
+                ? { caretColor: "var(--foreground)" }
+                : undefined
+            }
+          />
+
+          {/* Quick verse dropdown (reference mode: chapter/verse stage) */}
+          {shouldShowVerseDropdown && quickVersesList.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 z-50 max-h-64 overflow-y-auto rounded-md border border-border bg-popover shadow-lg">
+              <div className="p-1">
+                {quickVersesList.map((verse) => (
+                  <button
+                    key={verse.id}
+                    onClick={() => handleQuickVerseClick(verse)}
+                    className="flex w-full items-start gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground"
+                  >
+                    <span className="shrink-0 font-semibold text-primary w-6 text-right">
+                      {verse.verse}
+                    </span>
+                    <span className="flex-1 text-muted-foreground line-clamp-1">
+                      {verse.text}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {activeTab === "book" ? (
-          <div className="flex flex-1 items-center gap-2 pr-3">
-            {/* EasyWorship-style autocomplete */}
-            <div className="relative flex-1">
-              {/* Suggestion ghost overlay */}
-              {quickSuggestion && quickSuggestion !== quickInput && (
-                <div className="absolute inset-0 flex items-center px-3 pointer-events-none z-10">
-                  <span className="text-xs font-normal">
-                    <span className="text-foreground">{quickInput}</span>
-                    <span className="text-gray-500 dark:text-gray-400">{quickSuggestion.slice(quickInput.length)}</span>
-                  </span>
-                </div>
-              )}
-              <Input
-                ref={quickInputRef}
-                value={quickInput}
-                onChange={(e) => setQuickInput(e.target.value)}
-                onKeyDown={handleQuickKeyDown}
-                placeholder="Type: J → John 3:16"
-                className={cn(
-                  "h-7 text-xs relative bg-background",
-                  quickSuggestion && quickSuggestion !== quickInput ? "text-transparent" : ""
-                )}
-                style={quickSuggestion && quickSuggestion !== quickInput ? {
-                  caretColor: "var(--foreground)",
-                } : undefined}
-              />
-              {/* Quick verse dropdown */}
-              {shouldShowVerseDropdown && quickVersesList.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 z-50 max-h-64 overflow-y-auto rounded-md border border-border bg-popover shadow-lg">
-                  <div className="p-1">
-                    {quickVersesList.map((verse) => (
-                      <button
-                        key={verse.id}
-                        onClick={() => handleQuickVerseClick(verse)}
-                        className="flex w-full items-start gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground"
-                      >
-                        <span className="shrink-0 font-semibold text-primary w-6 text-right">
-                          {verse.verse}
-                        </span>
-                        <span className="flex-1 text-muted-foreground line-clamp-1">
-                          {verse.text}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            {translationSelector}
-          </div>
-        ) : (
-          <div className="flex flex-1 items-center gap-2 pr-3">
-            <Input
-              placeholder="Search verse text..."
-              value={contextQuery}
-              onChange={(e) => handleContextSearch(e.target.value)}
-              className="h-7 flex-1 text-xs"
-            />
-            {translationSelector}
-          </div>
-        )}
+        {translationSelector}
       </div>
 
-      {/* Book search tab — chapter verse list */}
-      {activeTab === "book" && (
+      {/* REFERENCE MODE — chapter header + verse list ─────────────────────────── */}
+      {searchMode === "reference" && (
         <>
-          {/* STICKY: Chapter header + prev/next */}
+          {/* STICKY: Chapter title + prev/next nav */}
           <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2 min-h-9">
             {selectedBook && (
               <h3 className="text-sm font-semibold text-foreground">
@@ -619,16 +609,16 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
         </>
       )}
 
-      {/* Context search tab — semantic / hybrid search */}
-      {activeTab === "context" && (
+      {/* TEXT SEARCH MODE — semantic / hybrid search results ────────────────── */}
+      {searchMode === "text" && (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="flex flex-col gap-0 p-2">
-            {contextQuery.length < 5 && (
+            {unifiedQuery.length < 5 && (
               <p className="p-4 text-center text-xs text-muted-foreground">
-                Search by meaning — type a phrase, paraphrase, or topic...
+                Search by meaning — type a phrase, paraphrase, or topic…
               </p>
             )}
-            {contextQuery.length >= 5 && semanticResults.length === 0 && (
+            {unifiedQuery.length >= 5 && semanticResults.length === 0 && (
               <p className="p-4 text-center text-xs text-muted-foreground">
                 No results found
               </p>
@@ -666,7 +656,7 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
                   </span>
                 </div>
                 <p className="flex-1 text-xs leading-relaxed text-muted-foreground">
-                  <HighlightedText text={result.verse_text} query={contextQuery} />
+                  <HighlightedText text={result.verse_text} query={unifiedQuery} />
                 </p>
                 {queuedVerseKeys.has(`${result.book_number}:${result.chapter}:${result.verse}`) ? (
                   <TooltipProvider>
