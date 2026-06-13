@@ -10,6 +10,19 @@ import { hydrateSettings } from "@/stores/settings-store"
 import { hydrateBibleStore, initBiblePersistence } from "@/stores/bible-store"
 import { hydrateBroadcastThemes } from "@/stores/broadcast-store"
 
+// Install the dev Bible bridge BEFORE the first invoke() so every IPC call is
+// intercepted. Guard: DEV build + browser context + NOT inside a real Tauri
+// webview. In production Vite replaces import.meta.env.DEV with false and
+// dead-code-eliminates this block entirely — tauri-bridge.ts is never bundled.
+if (
+  import.meta.env.DEV &&
+  typeof window !== "undefined" &&
+  !("__TAURI_INTERNALS__" in window)
+) {
+  const { installDevTauriBridge } = await import("./dev/tauri-bridge.ts")
+  installDevTauriBridge()
+}
+
 // Webview reloads do NOT restart the Rust backend, so any STT pipeline
 // left running from the previous webview session still has
 // `stt_active = true`. That makes the next `start_transcription` call
