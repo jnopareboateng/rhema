@@ -1,8 +1,5 @@
 import { useState, useCallback, useRef } from "react"
 import {
-  BookOpenIcon,
-  Music2Icon,
-  VideoIcon,
   GripVerticalIcon,
   PlayIcon,
   PlusIcon,
@@ -25,26 +22,15 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+import { KindIcon } from "@/components/ui/kind-icon"
 import { useQueueStore } from "@/stores/queue-store"
 import { useBroadcastStore } from "@/stores/broadcast-store"
-import { useBibleStore } from "@/stores"
-import { bibleActions } from "@/hooks/use-bible"
+import { bibleActions, getActiveAbbrev } from "@/hooks/use-bible"
 import { verseToContentItem } from "@/hooks/use-broadcast"
 import { DragDropProvider } from "@dnd-kit/react"
 import { useSortable } from "@dnd-kit/react/sortable"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function KindIcon({ kind }: { kind: ContentItem["kind"] }) {
-  switch (kind) {
-    case "verse":
-      return <BookOpenIcon className="size-3 shrink-0 text-blue-400" />
-    case "lyrics":
-      return <Music2Icon className="size-3 shrink-0 text-purple-400" />
-    case "media":
-      return <VideoIcon className="size-3 shrink-0 text-teal-400" />
-  }
-}
 
 function SectionLabel({
   label,
@@ -86,9 +72,7 @@ function SortableRow({
     index,
   })
 
-  const isLive = useBroadcastStore((s) => s.isLive)
-  const liveItemId = useBroadcastStore((s) => s.liveItem?.id)
-  const showLive = isLive && liveItemId === item.id
+  const showLive = useBroadcastStore((s) => s.isLive && s.liveItem?.id === item.id)
 
   const handlePlay = () => {
     useQueueStore.getState().setActive(index)
@@ -120,7 +104,7 @@ function SortableRow({
       </span>
 
       {/* Content-kind icon */}
-      <KindIcon kind={item.kind} />
+      <KindIcon kind={item.kind} size={12} className="shrink-0" />
 
       {/* Title + kind label */}
       <div className="min-w-0 flex-1">
@@ -167,11 +151,6 @@ function AddItemPopover() {
   const [results, setResults] = useState<Verse[]>([])
   const searchRequestIdRef = useRef(0)
 
-  const translations = useBibleStore((s) => s.translations)
-  const activeTranslationId = useBibleStore((s) => s.activeTranslationId)
-  const abbrev =
-    translations.find((t) => t.id === activeTranslationId)?.abbreviation ?? "KJV"
-
   const handleSearch = useCallback(async (q: string) => {
     setQuery(q)
     const requestId = ++searchRequestIdRef.current
@@ -189,16 +168,13 @@ function AddItemPopover() {
     }
   }, [])
 
-  const handleSelect = useCallback(
-    (verse: Verse) => {
-      const item = verseToContentItem(verse, abbrev, { source: "manual" })
-      useQueueStore.getState().addItem(item)
-      setOpen(false)
-      setQuery("")
-      setResults([])
-    },
-    [abbrev],
-  )
+  const handleSelect = useCallback((verse: Verse) => {
+    const item = verseToContentItem(verse, getActiveAbbrev(), { source: "manual" })
+    useQueueStore.getState().addItem(item)
+    setOpen(false)
+    setQuery("")
+    setResults([])
+  }, [])
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)

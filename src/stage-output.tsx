@@ -3,18 +3,9 @@ import "@/index.css"
 import { useState, useEffect } from "react"
 import { createRoot } from "react-dom/client"
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow"
-import { BookOpen, Music2, Video } from "lucide-react"
 import { CanvasVerse } from "@/components/ui/canvas-verse"
+import { KindIcon } from "@/components/ui/kind-icon"
 import type { StagePayload } from "@/lib/stage-payload"
-import type { ContentKind } from "@/types/content"
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-const KIND_ICONS: Record<ContentKind, React.ReactNode> = {
-  verse: <BookOpen size={20} aria-hidden />,
-  lyrics: <Music2 size={20} aria-hidden />,
-  media: <Video size={20} aria-hidden />,
-}
 
 function formatTime(d: Date): string {
   return (
@@ -181,7 +172,7 @@ function StageOutput() {
                   alignItems: "center",
                 }}
               >
-                {KIND_ICONS[payload.nextItem.kind]}
+                <KindIcon kind={payload.nextItem.kind} size={20} colored={false} />
               </span>
               <span
                 style={{

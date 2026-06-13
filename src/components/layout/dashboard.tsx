@@ -181,7 +181,6 @@ export function Dashboard() {
         >
           <PreviewStagingPanel
             stagedItem={stagedItem}
-            setStagedItem={setStagedItem}
           />
           <LiveOutput />
         </div>

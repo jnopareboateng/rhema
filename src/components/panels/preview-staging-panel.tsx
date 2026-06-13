@@ -8,14 +8,9 @@ import { useBroadcastStore, useQueueStore } from "@/stores"
 interface PreviewStagingPanelProps {
   /** The item currently staged for preview. Set by Content Browser or Verse Detail. */
   stagedItem: ContentItem | null
-  /** Replaces or clears the staged item. Wave 3 wires Browser/Detail selections here. */
-  setStagedItem: (i: ContentItem | null) => void
 }
 
-export function PreviewStagingPanel({ stagedItem, setStagedItem }: PreviewStagingPanelProps) {
-  // setStagedItem is wired from Browser/Detail selection events in Wave 3
-  void setStagedItem
-
+export function PreviewStagingPanel({ stagedItem }: PreviewStagingPanelProps) {
   const themes = useBroadcastStore((s) => s.themes)
   const activeThemeId = useBroadcastStore((s) => s.activeThemeId)
   const activeTheme = themes.find((t) => t.id === activeThemeId) ?? themes[0]

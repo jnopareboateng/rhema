@@ -23,9 +23,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useBible, bibleActions } from "@/hooks/use-bible"
+import { useBible, bibleActions, useActiveAbbrev } from "@/hooks/use-bible"
 import { useBibleStore, useQueueStore } from "@/stores"
-import { verseToContentItem } from "@/hooks/use-broadcast"
+import { verseToContentItem, semanticResultToVerse } from "@/hooks/use-broadcast"
 import type { Book, Verse, SemanticSearchResult } from "@/types"
 import type { ContentItem } from "@/types/content"
 import { Input } from "@/components/ui/input"
@@ -70,7 +70,6 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
   const [chapter, setChapter] = useState(1)
   const [selectedVerseId, setSelectedVerseId] = useState<number | null>(null)
 
-  const [showQuickVerses, setShowQuickVerses] = useState(false)
   const [quickVersesList, setQuickVersesList] = useState<Verse[]>([])
 
   const quickInputRef = useRef<HTMLInputElement>(null)
@@ -96,11 +95,7 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
 
   const selectedBookNumber = selectedBook?.book_number
 
-  const activeTranslationAbbrev = useMemo(
-    () =>
-      translations.find((t) => t.id === activeTranslationId)?.abbreviation ?? "KJV",
-    [translations, activeTranslationId]
-  )
+  const activeTranslationAbbrev = useActiveAbbrev()
 
   // ── Routing heuristic ────────────────────────────────────────────────────────
   const autocompleteResult = useMemo(
@@ -311,14 +306,13 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
         chapter: result.chapter,
       }).then(verses => {
         setQuickVersesList(verses)
-        setShowQuickVerses(true)
       }).catch(console.error)
     }
   }, [autocompleteResult, activeTranslationId])
 
   const shouldShowVerseDropdown =
     searchMode === "reference" &&
-    showQuickVerses &&
+    quickVersesList.length > 0 &&
     (autocompleteResult.stage === "chapter" || autocompleteResult.stage === "verse")
 
   const handleQuickKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -331,13 +325,11 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
     if (e.key === "Enter") {
       e.preventDefault()
       setUnifiedQuery("")
-      setShowQuickVerses(false)
       return
     }
     if (e.key === "Escape") {
       e.preventDefault()
       setUnifiedQuery("")
-      setShowQuickVerses(false)
       return
     }
   }, [unifiedQuery, quickSuggestion])
@@ -349,7 +341,6 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
       verse: verse.verse,
     })
     setUnifiedQuery("")
-    setShowQuickVerses(false)
   }, [])
 
   // ── Translation selector (shared between modes) ──────────────────────────────
@@ -383,6 +374,7 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
     : <SparklesIcon className="size-3.5 shrink-0 text-lime-400/80 transition-colors" />
 
   return (
+    <TooltipProvider>
     <div
       ref={panelRef}
       data-slot="bible-browser"
@@ -425,7 +417,7 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
           />
 
           {/* Quick verse dropdown (reference mode: chapter/verse stage) */}
-          {shouldShowVerseDropdown && quickVersesList.length > 0 && (
+          {shouldShowVerseDropdown && (
             <div className="absolute top-full left-0 right-0 mt-1 z-50 max-h-64 overflow-y-auto rounded-md border border-border bg-popover shadow-lg">
               <div className="p-1">
                 {quickVersesList.map((verse) => (
@@ -552,63 +544,59 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
 
                         {/* Queue indicator / add button */}
                         {isQueued ? (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span
-                                  className="mt-[0.1875rem] flex size-5 shrink-0 cursor-pointer items-center justify-center"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    const store = useQueueStore.getState()
-                                    const idx = store.findDuplicate(
-                                      verse.book_number,
-                                      verse.chapter,
-                                      verse.verse,
-                                    )
-                                    if (idx !== -1) {
-                                      store.flashItem(store.items[idx].id)
-                                      document
-                                        .querySelector(
-                                          `[data-slot="service-queue"] [data-queue-idx="${idx}"]`,
-                                        )
-                                        ?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-                                    }
-                                  }}
-                                >
-                                  <CheckIcon className="size-3.5 text-ai-direct" />
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="left">Already in queue</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className="mt-[0.1875rem] flex size-5 shrink-0 cursor-pointer items-center justify-center"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  const store = useQueueStore.getState()
+                                  const idx = store.findDuplicate(
+                                    verse.book_number,
+                                    verse.chapter,
+                                    verse.verse,
+                                  )
+                                  if (idx !== -1) {
+                                    store.flashItem(store.items[idx].id)
+                                    document
+                                      .querySelector(
+                                        `[data-slot="service-queue"] [data-queue-idx="${idx}"]`,
+                                      )
+                                      ?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+                                  }
+                                }}
+                              >
+                                <CheckIcon className="size-3.5 text-ai-direct" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">Already in queue</TooltipContent>
+                          </Tooltip>
                         ) : (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon-xs"
-                                  className={cn(
-                                    "mt-[0.1875rem] shrink-0 opacity-0 transition-opacity group-hover:opacity-100",
-                                    isTarget
-                                      ? "hover:bg-lime-500/20 hover:text-lime-500"
-                                      : "bg-primary/40! text-primary-foreground hover:bg-primary!",
-                                  )}
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    useQueueStore.getState().addItem(
-                                      verseToContentItem(verse, activeTranslationAbbrev, {
-                                        source: "manual",
-                                      }),
-                                    )
-                                  }}
-                                >
-                                  <PlusIcon className="size-3" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="left">Add to queue</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                className={cn(
+                                  "mt-[0.1875rem] shrink-0 opacity-0 transition-opacity group-hover:opacity-100",
+                                  isTarget
+                                    ? "hover:bg-lime-500/20 hover:text-lime-500"
+                                    : "bg-primary/40! text-primary-foreground hover:bg-primary!",
+                                )}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  useQueueStore.getState().addItem(
+                                    verseToContentItem(verse, activeTranslationAbbrev, {
+                                      source: "manual",
+                                    }),
+                                  )
+                                }}
+                              >
+                                <PlusIcon className="size-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">Add to queue</TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
                     )
@@ -642,16 +630,7 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
               <div
                 key={`${result.book_number}-${result.chapter}-${result.verse}-${idx}`}
                 onClick={() => {
-                  const verse: Verse = {
-                    id: 0,
-                    translation_id: activeTranslationId,
-                    book_number: result.book_number,
-                    book_name: result.book_name,
-                    book_abbreviation: "",
-                    chapter: result.chapter,
-                    verse: result.verse,
-                    text: result.verse_text,
-                  }
+                  const verse = semanticResultToVerse(result, activeTranslationId)
                   bibleActions.selectVerse(verse)
                   onStage(
                     verseToContentItem(verse, activeTranslationAbbrev, {
@@ -674,62 +653,49 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
                   <HighlightedText text={result.verse_text} query={unifiedQuery} />
                 </p>
                 {queuedVerseKeys.has(`${result.book_number}:${result.chapter}:${result.verse}`) ? (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span
-                          className="flex size-6 absolute right-2 top-1/2 -translate-y-1/2 shrink-0 cursor-pointer items-center justify-center"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            const store = useQueueStore.getState()
-                            const dupeIdx = store.findDuplicate(result.book_number, result.chapter, result.verse)
-                            if (dupeIdx !== -1) {
-                              store.flashItem(store.items[dupeIdx].id)
-                              document.querySelector(`[data-slot="service-queue"] [data-queue-idx="${dupeIdx}"]`)
-                                ?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-                            }
-                          }}
-                        >
-                          <CheckIcon className="size-4 text-ai-direct" />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="left">Already in queue</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        className="flex size-6 absolute right-2 top-1/2 -translate-y-1/2 shrink-0 cursor-pointer items-center justify-center"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          const store = useQueueStore.getState()
+                          const dupeIdx = store.findDuplicate(result.book_number, result.chapter, result.verse)
+                          if (dupeIdx !== -1) {
+                            store.flashItem(store.items[dupeIdx].id)
+                            document.querySelector(`[data-slot="service-queue"] [data-queue-idx="${dupeIdx}"]`)
+                              ?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+                          }
+                        }}
+                      >
+                        <CheckIcon className="size-4 text-ai-direct" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">Already in queue</TooltipContent>
+                  </Tooltip>
                 ) : (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity bg-primary text-primary-foreground hover:bg-primary/80"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            useQueueStore.getState().addItem(
-                              verseToContentItem(
-                                {
-                                  id: 0,
-                                  translation_id: activeTranslationId,
-                                  book_number: result.book_number,
-                                  book_name: result.book_name,
-                                  book_abbreviation: "",
-                                  chapter: result.chapter,
-                                  verse: result.verse,
-                                  text: result.verse_text,
-                                },
-                                activeTranslationAbbrev,
-                                { source: "manual", confidence: result.similarity }
-                              )
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity bg-primary text-primary-foreground hover:bg-primary/80"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          useQueueStore.getState().addItem(
+                            verseToContentItem(
+                              semanticResultToVerse(result, activeTranslationId),
+                              activeTranslationAbbrev,
+                              { source: "manual", confidence: result.similarity },
                             )
-                          }}
-                        >
-                          <PlusIcon className="size-3" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="left">Add to queue</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                          )
+                        }}
+                      >
+                        <PlusIcon className="size-3" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">Add to queue</TooltipContent>
+                  </Tooltip>
                 )}
               </div>
             ))}
@@ -737,5 +703,6 @@ export function BibleBrowser({ onStage }: BibleBrowserProps) {
         </div>
       )}
     </div>
+    </TooltipProvider>
   )
 }

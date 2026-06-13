@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import { useBible, bibleActions } from "@/hooks/use-bible"
+import { useBible, bibleActions, useActiveAbbrev, getActiveAbbrev } from "@/hooks/use-bible"
 import { useBibleStore } from "@/stores"
 import { useBroadcastStore } from "@/stores/broadcast-store"
 import { useQueueStore } from "@/stores/queue-store"
@@ -42,13 +42,9 @@ export function VerseDetailPanel({ stagedItem, setStagedItem }: VerseDetailPanel
   // Refs for the keydown handler — avoid stale closures without re-attaching.
   const stagedItemRef = useRef(stagedItem)
   const currentChapterRef = useRef(currentChapter)
-  const activeTranslationIdRef = useRef(activeTranslationId)
-  const translationsRef = useRef(translations)
 
   useEffect(() => { stagedItemRef.current = stagedItem }, [stagedItem])
   useEffect(() => { currentChapterRef.current = currentChapter }, [currentChapter])
-  useEffect(() => { activeTranslationIdRef.current = activeTranslationId }, [activeTranslationId])
-  useEffect(() => { translationsRef.current = translations }, [translations])
 
   // Narrow staged item to VerseContentItem once.
   const verseItem = stagedItem?.kind === "verse" ? stagedItem : null
@@ -59,8 +55,7 @@ export function VerseDetailPanel({ stagedItem, setStagedItem }: VerseDetailPanel
   const verseNumber = verseItem?.verseRef.verse
 
   // Active translation abbreviation (for building new ContentItems).
-  const abbrev =
-    translations.find((t) => t.id === activeTranslationId)?.abbreviation ?? "KJV"
+  const abbrev = useActiveAbbrev()
 
   // ── Chapter loading ────────────────────────────────────────────────────────
   // Re-load whenever the staged verse's book/chapter changes or the translation
@@ -105,12 +100,7 @@ export function VerseDetailPanel({ stagedItem, setStagedItem }: VerseDetailPanel
           : Math.min(chapter.length - 1, idx + 1)
 
       const nextVerse = chapter[nextIdx]
-      const translation =
-        translationsRef.current.find(
-          (t) => t.id === activeTranslationIdRef.current,
-        )?.abbreviation ?? "KJV"
-
-      setStagedItem(verseToContentItem(nextVerse, translation, { source: "manual" }))
+      setStagedItem(verseToContentItem(nextVerse, getActiveAbbrev(), { source: "manual" }))
     }
 
     document.addEventListener("keydown", handleKeyDown)
