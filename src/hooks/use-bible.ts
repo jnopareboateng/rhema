@@ -104,6 +104,19 @@ export const bibleActions = {
     useBibleStore.getState().selectVerse(verse),
 }
 
+/** Reactive hook: returns the abbreviation of the active translation. */
+export function useActiveAbbrev(): string {
+  return useBibleStore(
+    (s) => s.translations.find((t) => t.id === s.activeTranslationId)?.abbreviation ?? "KJV",
+  )
+}
+
+/** Snapshot helper: reads the active translation abbreviation without subscribing. */
+export function getActiveAbbrev(): string {
+  const s = useBibleStore.getState()
+  return s.translations.find((t) => t.id === s.activeTranslationId)?.abbreviation ?? "KJV"
+}
+
 // Hook for components that need reactive store data
 export function useBible() {
   const translations = useBibleStore((s) => s.translations)

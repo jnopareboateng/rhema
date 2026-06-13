@@ -1,7 +1,16 @@
-import { describe, it, expect, beforeEach } from "vitest"
+import { describe, it, expect, beforeEach, vi } from "vitest"
 import { useBroadcastStore } from "./broadcast-store"
 import { verseToContentItem } from "@/hooks/use-broadcast"
 import type { Verse } from "@/types"
+
+const mockEmitTo = vi.fn().mockResolvedValue(undefined)
+
+vi.mock("@tauri-apps/api/event", () => ({
+  emitTo: (...args: unknown[]) => mockEmitTo(...args),
+  // listen is called at module-init time; resolve with a no-op unlisten fn.
+  // Defined inline to avoid the vi.mock hoisting TDZ issue.
+  listen: vi.fn().mockResolvedValue(() => {}),
+}))
 
 const verse: Verse = { id: 0, translation_id: 1, book_number: 1, book_name: "Genesis",
   book_abbreviation: "Gen", chapter: 1, verse: 1, text: "In the beginning" }
@@ -11,7 +20,10 @@ function multiSlideItem() {
   return { ...base, slides: [base.slides[0], { reference: "", segments: [{ text: "slide 2" }] }] }
 }
 
-beforeEach(() => useBroadcastStore.setState({ liveItem: null, currentSlideIndex: 0, isLive: false }))
+beforeEach(() => {
+  mockEmitTo.mockClear()
+  useBroadcastStore.setState({ liveItem: null, currentSlideIndex: 0, isLive: false })
+})
 
 describe("broadcast-store live cursor", () => {
   it("presentItem loads slide 0 and goes on-air", () => {
@@ -40,5 +52,20 @@ describe("broadcast-store live cursor", () => {
     expect(useBroadcastStore.getState().isLive).toBe(false)
     clearLive()
     expect(useBroadcastStore.getState().liveItem).toBeNull()
+  })
+})
+
+describe("broadcast-store stage emit (R6)", () => {
+  it("presentItem emits broadcast:stage-update to stage with non-null currentSlide", () => {
+    useBroadcastStore.getState().presentItem(verseToContentItem(verse, "KJV"))
+
+    const stageCalls = mockEmitTo.mock.calls.filter(
+      ([target, event]) => target === "stage" && event === "broadcast:stage-update"
+    )
+    expect(stageCalls.length).toBeGreaterThan(0)
+
+    const payload = stageCalls[0][2] as { currentSlide: unknown; nextItem: unknown; theme: unknown }
+    expect(payload.currentSlide).not.toBeNull()
+    expect(payload.theme).toBeDefined()
   })
 })

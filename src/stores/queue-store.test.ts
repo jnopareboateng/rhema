@@ -25,6 +25,15 @@ describe("queue-store with ContentItem", () => {
     expect(s.findVerseInChapter(41, 2)).toBe(-1)
   })
 
+  it("addItem appends to the end of the queue", () => {
+    const a = verseToContentItem(v(1, 1, 1), "KJV")
+    const b = verseToContentItem(v(43, 3, 16), "KJV")
+    useQueueStore.getState().addItem(a)
+    useQueueStore.getState().addItem(b)
+    const items = useQueueStore.getState().items
+    expect(items.map((i) => i.id)).toEqual([a.id, b.id]) // a first, b last
+  })
+
   it("updateEarlyRef refines a chapter-only item and shifts the dedup key (book-only fallback)", () => {
     const s = useQueueStore.getState()
     // book-only detection guessed chapter 1, verse 1

@@ -56,6 +56,7 @@ pub fn run() {
             commands::broadcast::stop_ndi,
             commands::broadcast::get_ndi_status,
             commands::broadcast::push_ndi_frame,
+            commands::broadcast::open_stage_window,
             commands::remote::start_osc,
             commands::remote::stop_osc,
             commands::remote::get_osc_status,

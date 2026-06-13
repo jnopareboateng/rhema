@@ -1,6 +1,7 @@
 import { useBroadcastStore } from "@/stores/broadcast-store"
 import type { Verse } from "@/types"
 import type { ContentItem, ContentSource, VerseContentItem } from "@/types"
+import type { SemanticSearchResult } from "@/types/detection"
 
 export interface VerseItemOpts {
   id?: string
@@ -36,6 +37,23 @@ export function verseToContentItem(
     source: opts?.source ?? "manual",
     confidence: opts?.confidence,
     added_at: opts?.added_at ?? Date.now(),
+  }
+}
+
+/**
+ * Converts a SemanticSearchResult into a Verse shape for use with verseToContentItem.
+ * Uses sentinel values: id=0 (no DB row), book_abbreviation="" (not provided by search).
+ */
+export function semanticResultToVerse(result: SemanticSearchResult, translationId: number): Verse {
+  return {
+    id: 0,
+    translation_id: translationId,
+    book_number: result.book_number,
+    book_name: result.book_name,
+    book_abbreviation: "",
+    chapter: result.chapter,
+    verse: result.verse,
+    text: result.verse_text,
   }
 }
 

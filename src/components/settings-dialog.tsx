@@ -41,10 +41,12 @@ import {
   HelpCircleIcon,
   GraduationCapIcon,
   BrainCircuitIcon,
+  EyeIcon,
 } from "lucide-react"
 import { useSettingsStore } from "@/stores"
 import { useTutorialStore } from "@/stores/tutorial-store"
 import { useSettingsDialogStore } from "@/lib/settings-dialog"
+import { Switch } from "@/components/ui/switch"
 import type { DeviceInfo } from "@/types/audio"
 
 /* -------------------------------------------------------------------------- */
@@ -558,8 +560,6 @@ interface CommandLogEntry {
 }
 
 function RemoteControlSection() {
-  const [oscEnabled, setOscEnabled] = useState(false)
-  const [httpEnabled, setHttpEnabled] = useState(false)
   const [oscPort, setOscPort] = useState("8000")
   const [httpPort, setHttpPort] = useState("8080")
   const [oscStatus, setOscStatus] = useState<RemoteStatus>({ running: false, port: null })
@@ -625,12 +625,10 @@ function RemoteControlSection() {
     try {
       if (oscStatus.running) {
         await invoke("stop_osc")
-        setOscEnabled(false)
         setOscError(null)
       } else {
         const port = parseInt(oscPort) || 8000
         const boundPort = await invoke<number>("start_osc", { port })
-        setOscEnabled(true)
         setOscPort(String(boundPort))
         setOscError(null)
       }
@@ -643,12 +641,10 @@ function RemoteControlSection() {
     try {
       if (httpStatus.running) {
         await invoke("stop_http")
-        setHttpEnabled(false)
         setHttpError(null)
       } else {
         const port = parseInt(httpPort) || 8080
         const boundPort = await invoke<number>("start_http", { port })
-        setHttpEnabled(true)
         setHttpPort(String(boundPort))
         setHttpError(null)
       }
@@ -797,6 +793,7 @@ function RemoteControlSection() {
 /* -------------------------------------------------------------------------- */
 
 function HelpSection() {
+  const { tourEnabled, setTourEnabled } = useSettingsStore()
   const closeSettings = useSettingsDialogStore((s) => s.closeSettings)
 
   return (
@@ -808,6 +805,7 @@ function HelpSection() {
       </div>
 
       <div className="space-y-3">
+        {/* Interactive Tutorial — replay */}
         <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -823,6 +821,7 @@ function HelpSection() {
           <Button
             variant="outline"
             size="sm"
+            disabled={!tourEnabled}
             onClick={() => {
               closeSettings()
               setTimeout(() => {
@@ -831,10 +830,33 @@ function HelpSection() {
             }}
           >
             <GraduationCapIcon className="mr-1.5 size-3.5" />
-            Restart
+            Replay
           </Button>
         </div>
 
+        {/* Tour visibility toggle */}
+        <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+              <EyeIcon className="size-4 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Show onboarding tour</p>
+              <p className="text-xs text-muted-foreground">
+                {tourEnabled
+                  ? "Tour runs on first launch and can be replayed above."
+                  : "Tour is disabled — won't run automatically or be replayed."}
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={tourEnabled}
+            onCheckedChange={setTourEnabled}
+            aria-label="Toggle onboarding tour"
+          />
+        </div>
+
+        {/* Keyboard shortcuts */}
         <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
@@ -911,7 +933,7 @@ export function SettingsDialog() {
         <DialogDescription className="sr-only">
           Configure audio, display mode, and API keys.
         </DialogDescription>
-        <SidebarProvider className="items-start">
+        <SidebarProvider className="items-start" style={{ minHeight: "unset" }}>
           <Sidebar collapsible="none" className="hidden md:flex">
             <div className="h-14 border-b border-border border-r px-4 flex items-center" >
               Settings

@@ -1,8 +1,10 @@
 import { create } from "zustand"
-import { emitTo } from "@tauri-apps/api/event"
+import { emitTo, listen } from "@tauri-apps/api/event"
 import { load, type Store } from "@tauri-apps/plugin-store"
 import type { BroadcastTheme, ContentItem, Slide } from "@/types"
 import { BUILTIN_THEMES } from "@/lib/builtin-themes"
+import { useQueueStore } from "@/stores/queue-store"
+import { buildStageNextItem, type StagePayload } from "@/lib/stage-payload"
 
 type SelectedElement = "verse" | "reference" | null
 
@@ -85,6 +87,18 @@ function setNestedValue(obj: Record<string, unknown>, path: string, value: unkno
   ;(current as Record<string, unknown> | unknown[])[lastIndex as keyof typeof current] = value as never
 
   return result
+}
+
+function syncStageOutput(state: BroadcastState): void {
+  const theme = state.themes.find((t) => t.id === state.activeThemeId) ?? state.themes[0]
+  if (!theme) return
+  const { items, activeIndex } = useQueueStore.getState()
+  const payload: StagePayload = {
+    theme,
+    currentSlide: liveSlideOf(state),
+    nextItem: buildStageNextItem(items, activeIndex),
+  }
+  void emitTo("stage", "broadcast:stage-update", payload).catch(() => {})
 }
 
 function emitDraftToBroadcast(state: BroadcastState): void {
@@ -192,6 +206,7 @@ export const useBroadcastStore = create<BroadcastState>((set, get) => ({
   syncBroadcastOutput: () => {
     get().syncBroadcastOutputFor("main")
     get().syncBroadcastOutputFor("alt")
+    syncStageOutput(get())
   },
   setActiveTheme: (activeThemeId) => {
     set({ activeThemeId })
@@ -288,6 +303,18 @@ export const useBroadcastStore = create<BroadcastState>((set, get) => ({
   setSelectedElement: (selectedElement) => set({ selectedElement }),
   setRenamingTheme: (id) => set({ renamingThemeId: id }),
 }))
+
+// Keep the stage "next item" in sync when the queue changes while live.
+useQueueStore.subscribe(() => {
+  const s = useBroadcastStore.getState()
+  if (s.isLive) syncStageOutput(s)
+})
+
+// Push an initial stage frame when the stage window announces itself.
+// Guard: skip in non-browser (test/SSR) environments where window is not defined.
+if (typeof window !== "undefined") {
+  void listen("broadcast:stage-ready", () => syncStageOutput(useBroadcastStore.getState())).catch(() => {})
+}
 
 // ── Theme persistence via tauri-plugin-store ──
 

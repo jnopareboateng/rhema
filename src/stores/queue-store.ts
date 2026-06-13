@@ -44,7 +44,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     set((state) => {
       const key = dedupKey(item)
       if (state.items.some((i) => dedupKey(i) === key)) return state
-      return { items: [item, ...state.items] }
+      return { items: [...state.items, item] }
     }),
   removeItem: (id) =>
     set((state) => ({ items: state.items.filter((i) => i.id !== id) })),

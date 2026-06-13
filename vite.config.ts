@@ -1,7 +1,7 @@
 import path from "path"
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import { defineConfig, configDefaults } from "vitest/config"
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -9,6 +9,7 @@ export default defineConfig({
   server: {
     port: 3000,
     strictPort: true,
+    host: true,
   },
   build: {
     outDir: "build",
@@ -16,6 +17,7 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, "index.html"),
         broadcast: path.resolve(__dirname, "broadcast-output.html"),
+        stage: path.resolve(__dirname, "stage-display.html"),
       },
     },
   },
@@ -23,5 +25,9 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  test: {
+    // Never scan ephemeral worktree copies under .claude/worktrees.
+    exclude: [...configDefaults.exclude, "**/.claude/**"],
   },
 })

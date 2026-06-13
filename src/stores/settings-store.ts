@@ -13,6 +13,7 @@ interface SettingsState {
   confidenceThreshold: number
   cooldownMs: number
   onboardingComplete: boolean
+  tourEnabled: boolean
   sttProvider: SttProvider
 
   setDeepgramApiKey: (key: string | null) => void
@@ -24,6 +25,7 @@ interface SettingsState {
   setConfidenceThreshold: (threshold: number) => void
   setCooldownMs: (ms: number) => void
   setOnboardingComplete: (complete: boolean) => void
+  setTourEnabled: (enabled: boolean) => void
   setSttProvider: (provider: SttProvider) => void
 }
 
@@ -37,6 +39,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   confidenceThreshold: 0.8,
   cooldownMs: 2500,
   onboardingComplete: false,
+  tourEnabled: true,
   sttProvider: "deepgram",
 
   setDeepgramApiKey: (deepgramApiKey) => set({ deepgramApiKey }),
@@ -48,6 +51,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setConfidenceThreshold: (confidenceThreshold) => set({ confidenceThreshold }),
   setCooldownMs: (cooldownMs) => set({ cooldownMs }),
   setOnboardingComplete: (onboardingComplete) => set({ onboardingComplete }),
+  setTourEnabled: (tourEnabled) => set({ tourEnabled }),
   setSttProvider: (sttProvider) => set({ sttProvider }),
 }))
 
@@ -55,17 +59,15 @@ const PERSISTED_KEYS = [
   "deepgramApiKey",
   "openaiApiKey",
   "claudeApiKey",
-  "activeTranslationId",
   "audioDeviceId",
   "gain",
   "autoMode",
   "confidenceThreshold",
   "cooldownMs",
   "onboardingComplete",
+  "tourEnabled",
   "sttProvider",
 ] as const satisfies readonly (keyof SettingsState)[]
-
-type PersistedKey = (typeof PERSISTED_KEYS)[number]
 
 let tauriStore: Store | null = null
 let hydrationPromise: Promise<void> | null = null

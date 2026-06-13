@@ -132,6 +132,32 @@ pub fn open_broadcast_window(
     Ok(())
 }
 
+/// Open (or focus) the dedicated stage-display window on the given monitor.
+#[tauri::command]
+pub fn open_stage_window(app: tauri::AppHandle, monitor_index: usize) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("stage") {
+        window.show().map_err(|e| e.to_string())?;
+        window.set_focus().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+    let monitors = app.available_monitors().map_err(|e| e.to_string())?;
+    let monitor = monitors
+        .get(monitor_index)
+        .ok_or_else(|| format!("Monitor index {monitor_index} out of range"))?;
+    let pos = monitor.position();
+    let size = monitor.size();
+    WebviewWindowBuilder::new(&app, "stage", WebviewUrl::App("stage-display.html".into()))
+        .title("Rhema Stage Display")
+        .position(f64::from(pos.x), f64::from(pos.y))
+        .inner_size(f64::from(size.width), f64::from(size.height))
+        .decorations(true)
+        .skip_taskbar(false)
+        .focused(true)
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[tauri::command]
 pub fn close_broadcast_window(
     app: tauri::AppHandle,
