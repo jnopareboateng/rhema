@@ -15,6 +15,7 @@ export function TutorialOverlay() {
   const [isHydrated, setIsHydrated] = useState(false)
   const isRunning = useTutorialStore((s) => s.isRunning)
   const onboardingComplete = useSettingsStore((s) => s.onboardingComplete)
+  const tourEnabled = useSettingsStore((s) => s.tourEnabled)
   const { theme } = useTheme()
 
   const [arrowColor, setArrowColor] = useState<string | undefined>()
@@ -44,13 +45,13 @@ export function TutorialOverlay() {
   }, [])
 
   useEffect(() => {
-    if (isHydrated && !onboardingComplete) {
+    if (isHydrated && !onboardingComplete && tourEnabled) {
       const timer = setTimeout(() => {
         useTutorialStore.getState().startTutorial()
       }, 500)
       return () => clearTimeout(timer)
     }
-  }, [isHydrated, onboardingComplete])
+  }, [isHydrated, onboardingComplete, tourEnabled])
 
   const handleEvent = useCallback((data: EventData) => {
     if (data.status === STATUS.FINISHED || data.status === STATUS.SKIPPED) {

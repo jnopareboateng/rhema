@@ -41,10 +41,12 @@ import {
   HelpCircleIcon,
   GraduationCapIcon,
   BrainCircuitIcon,
+  EyeIcon,
 } from "lucide-react"
 import { useSettingsStore } from "@/stores"
 import { useTutorialStore } from "@/stores/tutorial-store"
 import { useSettingsDialogStore } from "@/lib/settings-dialog"
+import { Switch } from "@/components/ui/switch"
 import type { DeviceInfo } from "@/types/audio"
 
 /* -------------------------------------------------------------------------- */
@@ -791,6 +793,7 @@ function RemoteControlSection() {
 /* -------------------------------------------------------------------------- */
 
 function HelpSection() {
+  const { tourEnabled, setTourEnabled } = useSettingsStore()
   const closeSettings = useSettingsDialogStore((s) => s.closeSettings)
 
   return (
@@ -802,6 +805,7 @@ function HelpSection() {
       </div>
 
       <div className="space-y-3">
+        {/* Interactive Tutorial — replay */}
         <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -817,6 +821,7 @@ function HelpSection() {
           <Button
             variant="outline"
             size="sm"
+            disabled={!tourEnabled}
             onClick={() => {
               closeSettings()
               setTimeout(() => {
@@ -825,10 +830,33 @@ function HelpSection() {
             }}
           >
             <GraduationCapIcon className="mr-1.5 size-3.5" />
-            Restart
+            Replay
           </Button>
         </div>
 
+        {/* Tour visibility toggle */}
+        <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+              <EyeIcon className="size-4 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Show onboarding tour</p>
+              <p className="text-xs text-muted-foreground">
+                {tourEnabled
+                  ? "Tour runs on first launch and can be replayed above."
+                  : "Tour is disabled — won't run automatically or be replayed."}
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={tourEnabled}
+            onCheckedChange={setTourEnabled}
+            aria-label="Toggle onboarding tour"
+          />
+        </div>
+
+        {/* Keyboard shortcuts */}
         <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
